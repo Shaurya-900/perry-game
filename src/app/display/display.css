@@ -1,0 +1,182 @@
+.display {
+  position: fixed;
+  inset: 0;
+  background: var(--ink);
+  color: var(--paper);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  padding: 2.2vh 2.4vw;
+  gap: 1.6vh;
+  overflow: hidden;
+}
+
+.display .head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2vw;
+}
+
+.display .title {
+  font-family: var(--comic);
+  font-size: 7.4vh;
+  line-height: 1;
+  color: var(--gold);
+  letter-spacing: 2px;
+}
+
+.display .title small {
+  display: block;
+  font-size: 2.6vh;
+  color: var(--paper);
+  letter-spacing: 3px;
+}
+
+.display .counter {
+  font-family: var(--comic);
+  font-size: 3vh;
+  background: var(--red);
+  border: 4px solid var(--paper);
+  padding: 0.8vh 1.6vw;
+  text-align: center;
+}
+
+.display .counter b {
+  display: block;
+  font-size: 6vh;
+  line-height: 1;
+}
+
+.display .lb-rows {
+  display: grid;
+  grid-template-columns: 1fr;
+  /* minmax(0, 1fr) matters: without it a long name grows the track and the
+     whole board pushes through the footer. */
+  grid-template-rows: repeat(10, minmax(0, 1fr));
+  gap: 0.8vh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.display .lb-row {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  grid-template-columns: 11vh minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1.4vw;
+  background: var(--paper);
+  color: var(--ink);
+  border: 4px solid var(--paper);
+  padding: 0 1.6vw;
+  font-family: var(--comic);
+  /* line-height 1 keeps a row exactly one line tall, so ten of them always fit
+     between the header and the footer on any monitor. */
+  line-height: 1;
+  font-size: 4.4vh;
+  transition: transform 340ms ease, background 500ms ease;
+}
+
+.display .lb-row .rank {
+  color: var(--red);
+  font-size: 4vh;
+}
+
+.display .lb-row .name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.display .lb-row.top1 {
+  background: var(--gold);
+}
+
+.display .lb-row.top2,
+.display .lb-row.top3 {
+  background: #f0e3c4;
+}
+
+.display .lb-row .score {
+  font-size: 5vh;
+}
+
+.display .lb-row.moved {
+  animation: pop 900ms ease;
+}
+
+.display .lb-row.fresh {
+  animation: slide 600ms ease;
+}
+
+@keyframes pop {
+  0% {
+    background: var(--red);
+    color: var(--paper);
+    transform: scale(1.03);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes slide {
+  from {
+    transform: translateX(-6%);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.display .foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2vw;
+}
+
+.display .cta {
+  font-family: var(--comic);
+  font-size: 4.4vh;
+  line-height: 1.05;
+}
+
+.display .cta span {
+  color: var(--gold);
+}
+
+.display .qr {
+  background: var(--paper);
+  padding: 1vh;
+  border: 4px solid var(--gold);
+  display: flex;
+}
+
+.display .qr img {
+  width: 18vh;
+  height: 18vh;
+  display: block;
+}
+
+.display .frozen {
+  font-family: var(--comic);
+  color: var(--gold);
+  font-size: 3vh;
+}
+
+.display .lb-rows .empty {
+  grid-row: 1 / -1;
+}
+
+.display .empty {
+  font-family: var(--comic);
+  font-size: 4vh;
+  opacity: 0.6;
+  align-self: center;
+  text-align: center;
+}
