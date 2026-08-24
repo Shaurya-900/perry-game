@@ -177,7 +177,6 @@ export function obBox(o: Obstacle, t: number): { lo: number; hi: number } {
 function addArc(
   coins: Coin[],
   gen: GenState,
-  rng: Rng,
   centreX: number,
   peak: number,
   span: number,
@@ -194,7 +193,6 @@ function addArc(
     });
   }
   gen.lastArcX = centreX;
-  void rng;
 }
 
 /**
@@ -236,9 +234,9 @@ export function generate(
         // Arc over the obstacle: reward the optimal jump.
         const ox = x + last.dx;
         const peak = last.kind === "tower" ? 235 : 120;
-        addArc(coins, gen, rng, ox + 18, peak, Math.min(230, 0.62 * speed));
+        addArc(coins, gen, ox + 18, peak, Math.min(230, 0.62 * speed));
       } else {
-        addArc(coins, gen, rng, spanEnd + 0.5 * speed, 90, Math.min(230, 0.6 * speed));
+        addArc(coins, gen, spanEnd + 0.5 * speed, 90, Math.min(230, 0.6 * speed));
       }
     }
 
