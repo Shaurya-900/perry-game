@@ -1,0 +1,106 @@
+import { describe, expect, it } from "vitest";
+import { CRATE_W, DRONE_W, FIXED_DT, LASER_W, MAX_SCORE_RATE, TOWER_W } from "./constants";
+import { MAX_PATTERN_SPAN, PATTERNS } from "./generator";
+import { botInput, nextObstacle, newBotMemory } from "./bot";
+import { createGame, score, step } from "./engine";
+
+interface RunResult {
+  seed: number;
+  startTime: number;
+  patterns: number;
+  died: boolean;
+  deathT: number;
+  deathKind: string;
+  maxRate: number;
+}
+
+function playWithBot(seed: number, startTime: number, maxSeconds: number): RunResult {
+  const s = createGame({ seed, startTime });
+  const mem = newBotMemory();
+  const ticks = Math.round(maxSeconds / FIXED_DT);
+  let deathKind = "";
+  let maxRate = 0;
+  for (let i = 0; i < ticks; i++) {
+    const input = botInput(s, mem);
+    const before = nextObstacle(s);
+    step(s, input);
+    if (s.dead) {
+      deathKind = before ? before.kind : "unknown";
+      break;
+    }
+    const elapsed = s.t - startTime;
+    if (elapsed > 3) maxRate = Math.max(maxRate, score(s) / elapsed);
+  }
+  return {
+    seed,
+    startTime,
+    patterns: s.gen.patternsEmitted,
+    died: s.dead,
+    deathT: s.t - startTime,
+    deathKind,
+    maxRate,
+  };
+}
+
+describe("obstacle generator", () => {
+  it("never produces an unwinnable pattern (10,000 patterns, perfect-input bot)", () => {
+    const TARGET = 10_000;
+    let patterns = 0;
+    let runs = 0;
+    const failures: RunResult[] = [];
+    let worstRate = 0;
+
+    // Half the sample from a cold start (ramping difficulty), half spawned at
+    // t=90s where the speed curve is pinned at its 2.2x ceiling.
+    for (let seed = 1; patterns < TARGET; seed++) {
+      const startTime = seed % 2 === 0 ? 0 : 90;
+      const r = playWithBot(seed, startTime, 70);
+      patterns += r.patterns;
+      runs++;
+      worstRate = Math.max(worstRate, r.maxRate);
+      if (r.died) failures.push(r);
+      if (runs > 2000) break;
+    }
+
+    if (failures.length) {
+      const sample = failures
+        .slice(0, 5)
+        .map(
+          (f) =>
+            `seed=${f.seed} start=${f.startTime}s died after ${f.deathT.toFixed(2)}s on ${f.deathKind}`,
+        )
+        .join("\n  ");
+      throw new Error(
+        `${failures.length}/${runs} bot runs died over ${patterns} patterns:\n  ${sample}`,
+      );
+    }
+
+    expect(patterns).toBeGreaterThanOrEqual(TARGET);
+    expect(failures.length).toBe(0);
+    // The anti-cheat ceiling must sit above anything a perfect player can score.
+    expect(worstRate).toBeLessThan(MAX_SCORE_RATE);
+  });
+
+  it("keeps every pattern inside one readable screen", () => {
+    const width: Record<string, number> = {
+      crate: CRATE_W,
+      tower: TOWER_W,
+      laser: LASER_W,
+      drone: DRONE_W,
+    };
+    expect(MAX_PATTERN_SPAN).toBeGreaterThan(0);
+    for (const p of PATTERNS) {
+      const span = Math.max(...p.items.map((i) => i.dx + width[i.kind]));
+      expect(
+        span,
+        `pattern "${p.name}" spans ${span}px, wider than the ${MAX_PATTERN_SPAN}px a player can read before committing`,
+      ).toBeLessThanOrEqual(MAX_PATTERN_SPAN);
+    }
+  });
+
+  it("is deterministic for a given seed", () => {
+    const a = playWithBot(4242, 0, 20);
+    const b = playWithBot(4242, 0, 20);
+    expect(a).toEqual(b);
+  });
+});
