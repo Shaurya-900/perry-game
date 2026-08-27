@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CRATE_W, DRONE_W, FIXED_DT, LASER_W, MAX_SCORE_RATE, TOWER_W } from "./constants";
+import { CRATE_W, DRONE_W, FIXED_DT, MAX_SCORE_RATE, TOWER_W } from "./constants";
 import { MAX_PATTERN_SPAN, PATTERNS } from "./generator";
 import { botInput, nextObstacle, newBotMemory } from "./bot";
 import { createGame, score, step } from "./engine";
@@ -50,10 +50,12 @@ describe("obstacle generator", () => {
     const failures: RunResult[] = [];
     let worstRate = 0;
 
-    // Half the sample from a cold start (ramping difficulty), half spawned at
-    // t=90s where the speed curve is pinned at its 2.2x ceiling.
+    // A third of the sample from a cold start (ramping difficulty), a third at
+    // t=90s where the speed curve is pinned at its 2.2x ceiling, and a third at
+    // t=180s where the gap squeeze is also maxed out — the hardest the game
+    // ever gets.
     for (let seed = 1; patterns < TARGET; seed++) {
-      const startTime = seed % 2 === 0 ? 0 : 90;
+      const startTime = [0, 90, 180][seed % 3];
       const r = playWithBot(seed, startTime, 70);
       patterns += r.patterns;
       runs++;
@@ -85,7 +87,6 @@ describe("obstacle generator", () => {
     const width: Record<string, number> = {
       crate: CRATE_W,
       tower: TOWER_W,
-      laser: LASER_W,
       drone: DRONE_W,
     };
     expect(MAX_PATTERN_SPAN).toBeGreaterThan(0);

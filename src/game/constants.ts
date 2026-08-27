@@ -14,7 +14,6 @@ export const GROUND_Y = 640;
 export const PLAYER_X = 84;
 export const PLAYER_W = 44;
 export const PLAYER_H = 56;
-export const PLAYER_SLIDE_H = 28;
 /**
  * Collision forgiveness. The drawn character is PLAYER_W x PLAYER_H, but the
  * box that kills is inset — near-misses read as skill, not as bugs. Standard
@@ -31,7 +30,6 @@ export const HOLD_GRAVITY = 900;
 export const JUMP_V = 820;
 /** Holding longer than this stops helping (spec: ~450ms). */
 export const MAX_HOLD = 0.45;
-export const SLIDE_TIME = 0.5;
 /** Tap buffer: a jump pressed this long before landing still fires. */
 export const JUMP_BUFFER = 0.12;
 /** Coyote time after walking off nothing (kept tiny, it is a runner). */
@@ -48,23 +46,21 @@ export const MAX_MULT = 2.2;
 /** Seconds to reach MAX_MULT (linear ramp). */
 export const RAMP_TIME = 90;
 
-/** World px per point of distance score ("one metre"). */
-export const METRE = 10;
+/** World px per point of distance score. Deliberately coarse: the counter
+ *  should tick, not blur. */
+export const METRE = 25;
 
-export const FEDORA_POINTS = 50;
+export const FEDORA_POINTS = 20;
 /** Seconds of invincibility from a golden fedora. */
 export const GOLDEN_TIME = 4;
 /** Points per obstacle ploughed through while invincible. */
-export const PLOUGH_POINTS = 75;
+export const PLOUGH_POINTS = 30;
 
 /** Obstacle geometry (heights are above the ground line). */
 export const CRATE_W = 40;
 export const CRATE_H = 42;
 export const TOWER_W = 38;
 export const TOWER_H = 145;
-export const LASER_W = 64;
-export const LASER_LOW = 34;
-export const LASER_HIGH = 96;
 export const DRONE_W = 36;
 export const DRONE_HALF_H = 14;
 /** Drone centre oscillates between these heights. */
@@ -83,13 +79,13 @@ export const FIXED_DT = 1 / 60;
 
 /**
  * Anti-cheat ceiling, points per second.
- *   distance: MAX_MULT * BASE_SPEED / METRE            = 66 pts/s
+ *   distance: MAX_MULT * BASE_SPEED / METRE            = 18 pts/s
  *   fedoras:  generator emits at most one 5-coin arc per 1.4 s
- *             -> 3.58 coins/s * 50                     = 179 pts/s
- *   plough:   at most ~1 obstacle/s while invincible    = 75 pts/s (rare, bounded)
- * Sum ~ 260, plus ~15 % headroom.
+ *             -> 3.58 coins/s * 20                     = 72 pts/s
+ *   plough:   at most ~1 obstacle/s while invincible    = 30 pts/s (rare, bounded)
+ * Sum ~ 120, plus ~15 % headroom.
  */
-export const MAX_SCORE_RATE = 300;
+export const MAX_SCORE_RATE = 140;
 
 export function speedAt(t: number): number {
   const m = 1 + (MAX_MULT - 1) * Math.min(1, t / RAMP_TIME);

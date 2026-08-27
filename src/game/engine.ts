@@ -14,11 +14,9 @@ import {
   MAX_HOLD,
   METRE,
   PLAYER_H,
-  PLAYER_SLIDE_H,
   PLAYER_W,
   PLAYER_X,
   PLOUGH_POINTS,
-  SLIDE_TIME,
   SPAWN_AHEAD,
   distanceAt,
   speedAt,
@@ -54,10 +52,6 @@ export interface GameState {
   beatBestAt: number;
 }
 
-export function playerHeight(p: PlayerState): number {
-  return p.slideT > 0 && p.onGround ? PLAYER_SLIDE_H : PLAYER_H;
-}
-
 export function newPlayer(): PlayerState {
   return {
     y: 0,
@@ -65,8 +59,6 @@ export function newPlayer(): PlayerState {
     onGround: true,
     holding: false,
     holdT: 0,
-    slideT: 0,
-    slideBuffer: 0,
     jumpBuffer: 0,
     coyote: COYOTE,
   };
@@ -114,14 +106,12 @@ export function createGame(opts: {
  */
 export function stepPlayer(p: PlayerState, dt: number, input: Input): void {
   if (input.jumpPressed) p.jumpBuffer = JUMP_BUFFER;
-  if (input.slidePressed) p.slideBuffer = JUMP_BUFFER;
 
   if (p.jumpBuffer > 0 && (p.onGround || p.coyote > 0)) {
     p.vy = JUMP_V;
     p.onGround = false;
     p.coyote = 0;
     p.jumpBuffer = 0;
-    p.slideT = 0;
     p.holding = true;
     p.holdT = 0;
   } else {
@@ -147,14 +137,6 @@ export function stepPlayer(p: PlayerState, dt: number, input: Input): void {
     p.onGround = false;
     p.coyote = Math.max(0, p.coyote - dt);
   }
-
-  if (p.slideBuffer > 0 && p.onGround && p.slideT <= 0) {
-    p.slideT = SLIDE_TIME;
-    p.slideBuffer = 0;
-  } else {
-    p.slideBuffer = Math.max(0, p.slideBuffer - dt);
-    if (p.slideT > 0) p.slideT = Math.max(0, p.slideT - dt);
-  }
 }
 
 /** Does the player box overlap this obstacle at time `t` / camera `camX`? */
@@ -168,7 +150,7 @@ export function hits(
   const left = PLAYER_X + HITBOX_INSET_X;
   const right = PLAYER_X + PLAYER_W - HITBOX_INSET_X;
   if (sx > right || sx + o.w < left) return false;
-  const top = p.y + playerHeight(p) - HITBOX_INSET_TOP;
+  const top = p.y + PLAYER_H - HITBOX_INSET_TOP;
   const box = obBox(o, t);
   return p.y < box.hi && top > box.lo;
 }
@@ -224,7 +206,6 @@ export function step(s: GameState, input: Input): void {
   }
 
   // Coins
-  const h = playerHeight(p);
   for (let i = s.coins.length - 1; i >= 0; i--) {
     const c = s.coins[i];
     if (c.x - s.camX < -DESPAWN_BEHIND) {
@@ -237,7 +218,7 @@ export function step(s: GameState, input: Input): void {
       cx + COIN_R > PLAYER_X &&
       cx - COIN_R < PLAYER_X + PLAYER_W &&
       c.y + COIN_R > p.y &&
-      c.y - COIN_R < p.y + h
+      c.y - COIN_R < p.y + PLAYER_H
     ) {
       c.taken = true;
       if (c.golden) {

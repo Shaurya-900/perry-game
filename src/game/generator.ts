@@ -6,9 +6,6 @@ import {
   DRONE_MAX_C,
   DRONE_MIN_C,
   DRONE_W,
-  LASER_HIGH,
-  LASER_LOW,
-  LASER_W,
   MAX_MULT,
   PLAYER_W,
   PLAYER_X,
@@ -30,7 +27,7 @@ import type { Coin, ObKind, Obstacle } from "./types";
  * playing 10,000 generated patterns with a perfect-input bot.
  */
 
-type Recovery = "jump" | "bigjump" | "slide" | "react";
+type Recovery = "jump" | "bigjump" | "react";
 
 interface PatternItem {
   /** Pixels after the pattern start. Fixed pixels, NOT time: a pattern has to
@@ -49,7 +46,6 @@ interface Pattern {
 
 export const PATTERNS: Pattern[] = [
   { name: "crate", items: [{ dx: 0, kind: "crate" }], recovery: "jump", minLevel: 0 },
-  { name: "laser", items: [{ dx: 0, kind: "laser" }], recovery: "slide", minLevel: 0 },
   { name: "drone", items: [{ dx: 0, kind: "drone" }], recovery: "react", minLevel: 0.05 },
   { name: "tower", items: [{ dx: 0, kind: "tower" }], recovery: "bigjump", minLevel: 0.12 },
   // Multi-obstacle patterns are spaced in PIXELS and kept inside
@@ -92,7 +88,6 @@ export const MAX_PATTERN_SPAN =
 const RECOVERY_TIME: Record<Recovery, number> = {
   jump: 0.3,
   bigjump: 0.55,
-  slide: 0.2,
   react: 0.4,
 };
 
@@ -119,9 +114,22 @@ export function createGen(startX: number): GenState {
   };
 }
 
-/** Difficulty 0..1 from elapsed run time. */
+/** Difficulty 0..1 from elapsed run time. Gates which patterns can appear. */
 export function levelAt(t: number): number {
   return Math.min(1, t / (RAMP_TIME * 0.75));
+}
+
+/**
+ * Second, slower difficulty ramp (0..1 over PRESSURE_TIME): it keeps squeezing
+ * the gap between patterns long after `level` and the speed curve have both
+ * topped out, so a long run keeps getting harder instead of plateauing.
+ * The floor is set by what the perfect-input bot can still answer —
+ * `generator.test.ts` plays 10,000 patterns at the squeezed end of the curve.
+ */
+export const PRESSURE_TIME = 180;
+
+export function pressureAt(t: number): number {
+  return Math.min(1, t / PRESSURE_TIME);
 }
 
 function makeObstacle(
@@ -137,8 +145,6 @@ function makeObstacle(
       return { id, kind, x, w: CRATE_W, yLow: 0, yHigh: CRATE_H, variant };
     case "tower":
       return { id, kind, x, w: TOWER_W, yLow: 0, yHigh: TOWER_H, variant };
-    case "laser":
-      return { id, kind, x, w: LASER_W, yLow: LASER_LOW, yHigh: LASER_HIGH, variant };
     case "drone": {
       // Centre band shrinks inwards at low difficulty so early drones sit high
       // and read easily. Any centre in [DRONE_MIN_C, DRONE_MAX_C] is clearable:
@@ -240,9 +246,10 @@ export function generate(
       }
     }
 
+    const pressure = pressureAt(t);
     const gap =
-      (REACTION + RECOVERY_TIME[p.recovery]) * (1.7 - 0.6 * level) +
-      randRange(rng, 0, 0.45) * (1.1 - level);
+      (REACTION + RECOVERY_TIME[p.recovery]) * (1.7 - 0.75 * pressure) +
+      randRange(rng, 0, 0.45) * (1.1 - pressure);
     const nextStart = spanEnd + gap * speed;
 
     // Golden fedora lives in the middle of a gap, at a comfortable height.

@@ -4,7 +4,6 @@ import {
   GROUND_Y,
   MAX_MULT,
   PLAYER_H,
-  PLAYER_SLIDE_H,
   PLAYER_W,
   PLAYER_X,
   WORLD_H,
@@ -16,11 +15,10 @@ import {
   drawCrate,
   drawDrone,
   drawFedora,
-  drawLaser,
   drawTower,
 } from "./art";
 import type { GameState } from "./engine";
-import { playerHeight, score } from "./engine";
+import { score } from "./engine";
 import { obBox } from "./generator";
 import { COMIC_FONT, GOLD, INK, PAPER, PAPER_DARK, RED, SKY } from "./palette";
 import type { Fx } from "./types";
@@ -407,7 +405,6 @@ export class Renderer {
       ctx.translate(x, this.groundY);
       if (o.kind === "crate") drawCrate(ctx, o.w, o.yHigh, o.variant);
       else if (o.kind === "tower") drawTower(ctx, o.w, o.yHigh, o.variant);
-      else if (o.kind === "laser") drawLaser(ctx, o.w, o.yLow, o.yHigh, s.t);
       else {
         const box = obBox(o, s.t);
         ctx.translate(0, -(box.lo + DRONE_HALF_H));
@@ -429,16 +426,13 @@ export class Renderer {
 
     // ---- Player ----
     const p = s.player;
-    const ph = playerHeight(p);
     const pose = s.dead
       ? "hit"
-      : ph === PLAYER_SLIDE_H
-        ? "slide"
-        : !p.onGround
-          ? p.vy > 0
-            ? "jump"
-            : "fall"
-          : "run";
+      : !p.onGround
+        ? p.vy > 0
+          ? "jump"
+          : "fall"
+        : "run";
     ctx.save();
     ctx.translate(PLAYER_X + PLAYER_W / 2, this.groundY - p.y);
     if (s.invT > 0) {
@@ -452,7 +446,7 @@ export class Renderer {
       ctx.restore();
     }
     if (s.dead) ctx.rotate(0.35);
-    drawAgent(ctx, pose, pose === "slide" ? PLAYER_SLIDE_H * 2 : PLAYER_H, this.runPhase);
+    drawAgent(ctx, pose, PLAYER_H, this.runPhase);
     ctx.restore();
 
     // ---- Particles ----
@@ -561,8 +555,6 @@ export class Renderer {
     const y = this.groundY - 240;
     ctx.strokeText("TAP TO JUMP · HOLD FOR HIGHER", WORLD_W / 2, y);
     ctx.fillText("TAP TO JUMP · HOLD FOR HIGHER", WORLD_W / 2, y);
-    ctx.strokeText("SWIPE DOWN TO SLIDE", WORLD_W / 2, y + 30);
-    ctx.fillText("SWIPE DOWN TO SLIDE", WORLD_W / 2, y + 30);
     ctx.restore();
   }
 }

@@ -1,4 +1,4 @@
-export type ObKind = "crate" | "tower" | "laser" | "drone";
+export type ObKind = "crate" | "tower" | "drone";
 
 export interface Obstacle {
   id: number;
@@ -36,8 +36,6 @@ export interface PlayerState {
   onGround: boolean;
   holding: boolean;
   holdT: number;
-  slideT: number;
-  slideBuffer: number;
   jumpBuffer: number;
   coyote: number;
 }
@@ -45,14 +43,9 @@ export interface PlayerState {
 export interface Input {
   jumpPressed: boolean;
   jumpHeld: boolean;
-  slidePressed: boolean;
 }
 
-export const NO_INPUT: Input = {
-  jumpPressed: false,
-  jumpHeld: false,
-  slidePressed: false,
-};
+export const NO_INPUT: Input = { jumpPressed: false, jumpHeld: false };
 
 export type FxKind =
   | "collect"
@@ -61,8 +54,7 @@ export type FxKind =
   | "best"
   | "plough"
   | "land"
-  | "jump"
-  | "slide";
+  | "jump";
 
 export interface Fx {
   kind: FxKind;

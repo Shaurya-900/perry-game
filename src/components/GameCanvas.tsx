@@ -38,11 +38,7 @@ interface Props {
   onGameOver: (r: RunResult) => void;
 }
 
-const NOTHING: Input = {
-  jumpPressed: false,
-  jumpHeld: false,
-  slidePressed: false,
-};
+const NOTHING: Input = { jumpPressed: false, jumpHeld: false };
 
 const GameCanvas = forwardRef<GameHandle, Props>(function GameCanvas(
   { mode, best, showHint, dim, onGameOver },

@@ -7,7 +7,7 @@ import {
   distanceAt,
   speedAt,
 } from "./constants";
-import { hits, playerHeight, stepPlayer } from "./engine";
+import { hits, stepPlayer } from "./engine";
 import type { GameState } from "./engine";
 import type { Input, Obstacle, PlayerState } from "./types";
 
@@ -29,14 +29,13 @@ const DECIDE_LEAD = 0.5;
 
 /**
  * Minimum time needed to answer each obstacle type from a standing start —
- * derived from the physics: time to rise clear of it, or to duck.
+ * derived from the physics: time to rise clear of it.
  * A rollout counts as survived once the player is back on the ground with at
  * least this much time before the next obstacle, i.e. genuinely able to chain
  * into the next answer.
  */
 const MIN_ANSWER: Record<string, number> = {
   crate: 0.16,
-  laser: 0.1,
   tower: 0.3,
   drone: 0.24,
 };
@@ -44,15 +43,10 @@ const MIN_ANSWER: Record<string, number> = {
 const HOLD_DURATIONS = [0, 0.12, 0.24, MAX_HOLD];
 
 function press(hold: boolean): Input {
-  return { jumpPressed: true, jumpHeld: hold, slidePressed: false };
+  return { jumpPressed: true, jumpHeld: hold };
 }
-const HOLD_ON: Input = { jumpPressed: false, jumpHeld: true, slidePressed: false };
-const IDLE: Input = { jumpPressed: false, jumpHeld: false, slidePressed: false };
-const SLIDE_IN: Input = {
-  jumpPressed: false,
-  jumpHeld: false,
-  slidePressed: true,
-};
+const HOLD_ON: Input = { jumpPressed: false, jumpHeld: true };
+const IDLE: Input = { jumpPressed: false, jumpHeld: false };
 
 function jumpPlan(hold: number): Input[] {
   const frames = Math.max(1, Math.round(hold / FIXED_DT));
@@ -61,7 +55,7 @@ function jumpPlan(hold: number): Input[] {
   return plan;
 }
 
-export const PLANS: Input[][] = [[SLIDE_IN], ...HOLD_DURATIONS.map(jumpPlan)];
+export const PLANS: Input[][] = HOLD_DURATIONS.map(jumpPlan);
 
 export function visible(obstacles: Obstacle[], camX: number): Obstacle[] {
   const out: Obstacle[] = [];
@@ -85,7 +79,7 @@ function recovered(
   speed: number,
   mustPass: Obstacle | null,
 ): boolean {
-  if (!p.onGround || p.slideT > 0) return false;
+  if (!p.onGround) return false;
   // "Recovered" only counts once the threat we were reacting to is behind us,
   // otherwise standing still trivially looks safe and the bot reacts at the
   // last possible frame — which no human can match.
@@ -197,5 +191,5 @@ export function nextObstacle(s: GameState): Obstacle | null {
 }
 
 export function debugPlayer(p: PlayerState): string {
-  return `y=${p.y.toFixed(1)} vy=${p.vy.toFixed(0)} h=${playerHeight(p)}`;
+  return `y=${p.y.toFixed(1)} vy=${p.vy.toFixed(0)}`;
 }
