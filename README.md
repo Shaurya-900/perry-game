@@ -32,7 +32,7 @@ outage during the fair costs you the leaderboard, not the booth.
 
 | Variable | What it is |
 | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_URL` | Supabase project URL. Server-only — it is read in route handlers, never in the browser |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role key. Server-only — every table has RLS on with no policies, so route handlers are the only way in |
 | `RUN_TOKEN_SECRET` | Long random string used to sign run tokens |
 | `ADMIN_KEY` | Opens `/admin?key=…` |
