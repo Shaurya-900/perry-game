@@ -52,7 +52,9 @@ export function checkScore(sub: RunSubmission, tokenAgeMs: number): ScoreVerdict
   const seconds = durationMs / 1000;
   const allowance = MAX_SCORE_RATE * Math.max(seconds, 3);
   if (score > allowance) return { ok: false, reason: "score_rate_impossible" };
-  if (sub.fedoras < 0 || sub.fedoras * 50 > score) {
+  // Number.isInteger also rejects NaN and Infinity: Number("abc") reaches here
+  // as NaN, and every bare comparison against NaN is false.
+  if (!Number.isInteger(sub.fedoras) || sub.fedoras < 0 || sub.fedoras * 50 > score) {
     return { ok: false, reason: "fedora_count_impossible" };
   }
   return { ok: true };

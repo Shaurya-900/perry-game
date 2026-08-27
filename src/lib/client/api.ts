@@ -128,7 +128,7 @@ export async function flushQueue(): Promise<number> {
         body: JSON.stringify(run),
       });
       if (res.ok) sent++;
-      else if (res.status >= 500) stillPending.push(run);
+      else if (res.status >= 500 || res.status === 429) stillPending.push(run);
     } catch {
       stillPending.push(run);
     }

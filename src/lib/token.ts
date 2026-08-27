@@ -12,7 +12,14 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 const MAX_AGE_MS = 10 * 60 * 1000;
 
 function secret(): string {
-  return process.env.RUN_TOKEN_SECRET || "dev-only-insecure-secret";
+  const s = process.env.RUN_TOKEN_SECRET;
+  if (s) return s;
+  // Falling back to a constant that is published in this repo would make every
+  // token forgeable, so production fails closed instead.
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("RUN_TOKEN_SECRET is not set");
+  }
+  return "dev-only-insecure-secret";
 }
 
 function b64url(buf: Buffer): string {
