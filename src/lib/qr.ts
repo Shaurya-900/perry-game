@@ -51,6 +51,41 @@ export function qrDataUrl(text: string, size = 320): string {
   return canvas.toDataURL("image/png");
 }
 
+export interface Challenge {
+  seed: number;
+  score: number;
+  name: string;
+}
+
+/**
+ * "Play my exact course and beat this." Base36 keeps it short enough to sit in
+ * a QR on the score card without crowding the art.
+ *
+ * Deliberately unsigned: it never touches the leaderboard, so the worst a
+ * tampered link can do is show the friend an impossible target.
+ */
+export function challengeUrl(seed: number, score: number, name: string): string {
+  const s = (seed >>> 0).toString(36);
+  const sc = Math.max(0, Math.floor(score)).toString(36);
+  const n = encodeURIComponent(name.trim().slice(0, 24));
+  return `${gameUrl()}?c=${s}.${sc}.${n}`;
+}
+
+export function parseChallenge(search: string): Challenge | null {
+  const raw = new URLSearchParams(search).get("c");
+  if (!raw) return null;
+  const parts = raw.split(".");
+  if (parts.length < 3) return null;
+  const seed = parseInt(parts[0], 36);
+  const score = parseInt(parts[1], 36);
+  if (!Number.isFinite(seed) || !Number.isFinite(score) || score < 0) return null;
+  // A name may legitimately contain a dot, so everything after the first two
+  // fields belongs to it.
+  const name = decodeURIComponent(parts.slice(2).join(".")).trim();
+  if (!name) return null;
+  return { seed: seed >>> 0, score, name: name.slice(0, 24) };
+}
+
 export function gameUrl(): string {
   const env = process.env.NEXT_PUBLIC_GAME_URL;
   if (env) return env;

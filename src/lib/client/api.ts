@@ -85,9 +85,10 @@ export async function registerPlayer(
 
 export async function startRun(
   playerId: string | null,
+  seed?: number,
 ): Promise<{ token: string; seed: number } | null> {
   if (!playerId) return null;
-  return post("/api/run/start", { playerId });
+  return post("/api/run/start", { playerId, seed });
 }
 
 /** Returns null when the score could not be delivered — it is queued instead. */
@@ -149,6 +150,20 @@ export async function fetchLeaderboard(
     return (await res.json()) as LeaderboardPayload;
   } catch {
     return null;
+  }
+}
+
+/** Heartbeat for the booth display. Failure is silently fine. */
+export function sendLive(token: string, score: number): void {
+  try {
+    void fetch("/api/run/live", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, score }),
+      keepalive: true,
+    }).catch(() => {});
+  } catch {
+    /* never blocks the game */
   }
 }
 

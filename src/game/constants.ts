@@ -57,6 +57,18 @@ export const GOLDEN_TIME = 4;
 /** Points per obstacle ploughed through while invincible. */
 export const PLOUGH_POINTS = 75;
 
+/** Seconds the magnet stays active. */
+export const MAGNET_TIME = 5;
+/** World px within which the magnet reaches a fedora. */
+export const MAGNET_RADIUS = 170;
+/** How fast a pulled fedora closes the gap, world px/s. */
+export const MAGNET_PULL = 620;
+/**
+ * Grace after a shield absorbs a hit. Without it the player is still inside
+ * the obstacle on the next tick and dies anyway.
+ */
+export const SHIELD_GRACE = 0.6;
+
 /** Obstacle geometry (heights are above the ground line). */
 export const CRATE_W = 40;
 export const CRATE_H = 42;
@@ -65,6 +77,26 @@ export const TOWER_H = 145;
 export const LASER_W = 64;
 export const LASER_LOW = 34;
 export const LASER_HIGH = 96;
+/**
+ * Duck gate — the one obstacle a jump cannot answer.
+ *
+ * GATE_HIGH clears the measured maximum jump apex (311.2 px, see
+ * `powerups.test.ts`) with margin, so it cannot be cleared by jumping.
+ * GATE_LOW sits between the sliding hitbox top (PLAYER_SLIDE_H - inset = 23)
+ * and the standing one (PLAYER_H - inset = 51), so running into it standing is
+ * a collision and sliding under it is not. Sliding is therefore the only
+ * answer, which is what gives ducking a reason to exist.
+ *
+ * It sits near the TOP of that range on purpose. The sliding character's art
+ * is far taller than its hitbox — the fedora crown reaches about 41px above
+ * the ground while the hitbox top is 23 — so a gap sized off the hitbox is
+ * passable but reads on a phone as a solid wall. The gap has to clear the
+ * drawn hat, not the collision box.
+ */
+export const GATE_W = 58;
+export const GATE_LOW = 48;
+export const GATE_HIGH = 340;
+
 export const DRONE_W = 36;
 export const DRONE_HALF_H = 14;
 /** Drone centre oscillates between these heights. */
@@ -82,12 +114,18 @@ export const DESPAWN_BEHIND = 240;
 export const FIXED_DT = 1 / 60;
 
 /**
- * Anti-cheat ceiling, points per second.
- *   distance: MAX_MULT * BASE_SPEED / METRE            = 66 pts/s
- *   fedoras:  generator emits at most one 5-coin arc per 1.4 s
- *             -> 3.58 coins/s * 50                     = 179 pts/s
- *   plough:   at most ~1 obstacle/s while invincible    = 75 pts/s (rare, bounded)
- * Sum ~ 260, plus ~15 % headroom.
+ * Anti-cheat ceiling, points per SUSTAINED second. `checkScore` compares it
+ * against score/duration for the whole run, so the bound that matters is the
+ * sustained rate, not a momentary spike.
+ *
+ *   distance: MAX_MULT * BASE_SPEED / METRE             = 44 pts/s
+ *   fedoras:  bursts to ~350 pts/s inside a single dense
+ *             second, but a coin-greedy player sustains  ~164 pts/s
+ *   plough:   at most ~1 obstacle/s while invincible     = 75 pts/s (rare)
+ *
+ * `generator.test.ts` pins the sustained figure with a deliberately
+ * over-generous greedy collector; keep ~1.5x of headroom above it so no real
+ * player is ever rejected. Raise this if coin density or scoring changes.
  */
 export const MAX_SCORE_RATE = 300;
 

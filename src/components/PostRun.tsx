@@ -14,7 +14,6 @@ interface Props {
   pending: boolean;
   /** The run had a signed token, so a failed send will be retried later. */
   queued: boolean;
-  cooldownMs: number;
   runsToday: number;
   name: string;
   onPlayAgain: () => void;
@@ -33,7 +32,6 @@ export default function PostRun({
   submitted,
   pending,
   queued,
-  cooldownMs,
   runsToday,
   name,
   onPlayAgain,
@@ -41,7 +39,6 @@ export default function PostRun({
 }: Props) {
   const [sharing, setSharing] = useState(false);
   const [shareNote, setShareNote] = useState("");
-  const waiting = cooldownMs > 0;
 
   async function share() {
     setSharing(true);
@@ -53,6 +50,7 @@ export default function PostRun({
       totalPlayers: submitted?.totalPlayers ?? null,
       fedoras: run.fedoras,
       seconds: run.durationMs / 1000,
+      seed: run.seed,
     });
     setSharing(false);
     track(result === "shared" ? "share" : "share_fallback");
@@ -85,8 +83,8 @@ export default function PostRun({
       {pending && <div className="sub">SENDING TO THE BOARD…</div>}
 
       <div className="row">
-        <button className="primary" onClick={onPlayAgain} disabled={waiting}>
-          {waiting ? `WAIT ${Math.ceil(cooldownMs / 1000)}s` : "PLAY AGAIN"}
+        <button className="primary" onClick={onPlayAgain}>
+          PLAY AGAIN
         </button>
       </div>
       <div className="row">

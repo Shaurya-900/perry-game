@@ -37,6 +37,7 @@ const DECIDE_LEAD = 0.5;
 const MIN_ANSWER: Record<string, number> = {
   crate: 0.16,
   laser: 0.1,
+  gate: 0.1,
   tower: 0.3,
   drone: 0.24,
 };
@@ -44,15 +45,39 @@ const MIN_ANSWER: Record<string, number> = {
 const HOLD_DURATIONS = [0, 0.12, 0.24, MAX_HOLD];
 
 function press(hold: boolean): Input {
-  return { jumpPressed: true, jumpHeld: hold, slidePressed: false };
+  return { jumpPressed: true, jumpHeld: hold, slidePressed: false, slideHeld: false };
 }
-const HOLD_ON: Input = { jumpPressed: false, jumpHeld: true, slidePressed: false };
-const IDLE: Input = { jumpPressed: false, jumpHeld: false, slidePressed: false };
-const SLIDE_IN: Input = {
+const HOLD_ON: Input = {
+  jumpPressed: false,
+  jumpHeld: true,
+  slidePressed: false,
+  slideHeld: false,
+};
+const IDLE: Input = {
   jumpPressed: false,
   jumpHeld: false,
-  slidePressed: true,
+  slidePressed: false,
+  slideHeld: false,
 };
+
+/** How long the bot is willing to hold a duck. */
+const SLIDE_DURATIONS = [0.25, 0.5, 0.8];
+
+function slidePlan(hold: number): Input[] {
+  const frames = Math.max(1, Math.round(hold / FIXED_DT));
+  const plan: Input[] = [
+    { jumpPressed: false, jumpHeld: false, slidePressed: true, slideHeld: true },
+  ];
+  for (let i = 1; i < frames; i++) {
+    plan.push({
+      jumpPressed: false,
+      jumpHeld: false,
+      slidePressed: false,
+      slideHeld: true,
+    });
+  }
+  return plan;
+}
 
 function jumpPlan(hold: number): Input[] {
   const frames = Math.max(1, Math.round(hold / FIXED_DT));
@@ -61,7 +86,10 @@ function jumpPlan(hold: number): Input[] {
   return plan;
 }
 
-export const PLANS: Input[][] = [[SLIDE_IN], ...HOLD_DURATIONS.map(jumpPlan)];
+export const PLANS: Input[][] = [
+  ...SLIDE_DURATIONS.map(slidePlan),
+  ...HOLD_DURATIONS.map(jumpPlan),
+];
 
 export function visible(obstacles: Obstacle[], camX: number): Obstacle[] {
   const out: Obstacle[] = [];
@@ -85,7 +113,7 @@ function recovered(
   speed: number,
   mustPass: Obstacle | null,
 ): boolean {
-  if (!p.onGround || p.slideT > 0) return false;
+  if (!p.onGround || p.sliding) return false;
   // "Recovered" only counts once the threat we were reacting to is behind us,
   // otherwise standing still trivially looks safe and the bot reacts at the
   // last possible frame — which no human can match.

@@ -30,12 +30,13 @@ export function isPageKeystroke(target: EventTarget | null): boolean {
 /**
  * One thumb, portrait, standing up in a crowd:
  *   tap anywhere        -> jump (hold for a higher one)
- *   tap the lower third -> slide
- *   swipe down          -> slide
+ *   tap the lower third -> duck (hold to stay down)
+ *   swipe down          -> duck (hold to stay down)
  * Keyboard is wired up too, purely so the game can be developed on a laptop.
  */
 export class InputController {
   private held = false;
+  private slideHeld = false;
   private pendingJump = false;
   private pendingSlide = false;
   private startY = 0;
@@ -75,6 +76,8 @@ export class InputController {
       jumpPressed: this.pendingJump,
       jumpHeld: this.held,
       slidePressed: this.pendingSlide,
+      // Held state is level-triggered, so it is deliberately NOT cleared here.
+      slideHeld: this.slideHeld,
     };
     this.pendingJump = false;
     this.pendingSlide = false;
@@ -83,6 +86,7 @@ export class InputController {
 
   reset(): void {
     this.held = false;
+    this.slideHeld = false;
     this.pendingJump = false;
     this.pendingSlide = false;
     this.activePointer = null;
@@ -98,6 +102,7 @@ export class InputController {
     this.swiped = false;
     if (e.clientY - rect.top > rect.height * 0.68) {
       this.pendingSlide = true;
+      this.slideHeld = true;
       this.swiped = true;
       return;
     }
@@ -112,6 +117,7 @@ export class InputController {
     if (dy > 28 && dy > dx) {
       this.swiped = true;
       this.pendingSlide = true;
+      this.slideHeld = true;
       this.held = false;
     }
   };
@@ -120,6 +126,7 @@ export class InputController {
     if (e.pointerId !== this.activePointer) return;
     this.activePointer = null;
     this.held = false;
+    this.slideHeld = false;
   };
 
   private onBlur = () => this.reset();
@@ -132,6 +139,7 @@ export class InputController {
       e.preventDefault();
     } else if (e.code === "ArrowDown" || e.code === "KeyS") {
       if (!e.repeat) this.pendingSlide = true;
+      this.slideHeld = true;
       e.preventDefault();
     }
   };
@@ -142,6 +150,8 @@ export class InputController {
   private onKeyUp = (e: KeyboardEvent) => {
     if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") {
       this.held = false;
+    } else if (e.code === "ArrowDown" || e.code === "KeyS") {
+      this.slideHeld = false;
     }
   };
 }

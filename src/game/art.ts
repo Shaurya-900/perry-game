@@ -1,4 +1,4 @@
-import { GOLD, INK, PAPER, RED, TEAL } from "./palette";
+import { BLUE, GOLD, INK, PAPER, PURPLE, RED, TEAL } from "./palette";
 
 /**
  * Every sprite in the game is drawn with paths — no image assets at all.
@@ -277,6 +277,7 @@ export function drawLaser(
   hi: number,
   t: number,
   lw = 3,
+  color = RED,
 ) {
   const h = hi - lo;
   ctx.save();
@@ -289,7 +290,7 @@ export function drawLaser(
   ctx.stroke();
   ctx.beginPath();
   ctx.arc(w / 2, -hi - 13, 6, 0, Math.PI * 2);
-  ctx.fillStyle = RED;
+  ctx.fillStyle = color;
   ctx.fill();
   ctx.stroke();
 
@@ -298,7 +299,7 @@ export function drawLaser(
   ctx.globalAlpha = pulse;
   ctx.beginPath();
   ctx.rect(0, -hi, w, h);
-  ctx.fillStyle = RED;
+  ctx.fillStyle = color;
   ctx.fill();
   ctx.globalAlpha = 1;
   ctx.beginPath();
@@ -317,6 +318,30 @@ export function drawLaser(
   ctx.strokeStyle = "#FFE9A8";
   ctx.lineWidth = 2;
   ctx.stroke();
+  ctx.restore();
+}
+
+/**
+ * Duck gate. The beam is a laser in another colour; the strip on the ground
+ * underneath is what tells a first-timer the gap is a way through.
+ */
+export function drawGate(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  lo: number,
+  hi: number,
+  t: number,
+  lw = 3,
+) {
+  drawLaser(ctx, w, lo, hi, t, lw, PURPLE);
+  ctx.save();
+  ctx.globalAlpha = 0.35 + 0.25 * Math.sin(t * 8);
+  ctx.fillStyle = PURPLE;
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath();
+    ctx.rect(i * (w / 4) + 2, -4, w / 4 - 4, 5);
+    ctx.fill();
+  }
   ctx.restore();
 }
 
@@ -397,6 +422,66 @@ export function drawFedora(
       ctx.lineTo(Math.cos(a) * r * 1.9, Math.sin(a) * r * 1.9);
       ctx.stroke();
     }
+  }
+  ctx.restore();
+}
+
+/** Shield pickup: a kite shield, readable at 26px on a phone. */
+export function drawShield(
+  ctx: CanvasRenderingContext2D,
+  r: number,
+  t: number,
+  lw = 2.5,
+) {
+  ctx.save();
+  ctx.scale(1 + 0.06 * Math.sin(t * 4), 1 + 0.06 * Math.sin(t * 4));
+  ctx.beginPath();
+  ctx.moveTo(0, -r);
+  ctx.lineTo(r * 0.85, -r * 0.5);
+  ctx.quadraticCurveTo(r * 0.85, r * 0.5, 0, r);
+  ctx.quadraticCurveTo(-r * 0.85, r * 0.5, -r * 0.85, -r * 0.5);
+  ctx.closePath();
+  ctx.fillStyle = BLUE;
+  ctx.fill();
+  ink(ctx, lw);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-r * 0.3, -r * 0.35);
+  ctx.lineTo(-r * 0.3, r * 0.25);
+  ctx.strokeStyle = "#BFE0F0";
+  ctx.lineWidth = lw;
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** Magnet pickup: a horseshoe magnet with grey poles. */
+export function drawMagnet(
+  ctx: CanvasRenderingContext2D,
+  r: number,
+  t: number,
+  lw = 2.5,
+) {
+  ctx.save();
+  ctx.rotate(Math.sin(t * 4) * 0.2);
+  ctx.lineCap = "butt";
+  ctx.beginPath();
+  ctx.arc(0, r * 0.15, r * 0.62, Math.PI, 0);
+  ctx.lineTo(r * 0.62, r * 0.7);
+  ctx.lineTo(r * 0.24, r * 0.7);
+  ctx.lineTo(r * 0.24, r * 0.15);
+  ctx.arc(0, r * 0.15, r * 0.24, 0, Math.PI, true);
+  ctx.lineTo(-r * 0.62, r * 0.7);
+  ctx.closePath();
+  ctx.fillStyle = RED;
+  ctx.fill();
+  ink(ctx, lw);
+  ctx.stroke();
+  ctx.fillStyle = "#D8D2C4";
+  for (const sx of [-1, 1]) {
+    ctx.beginPath();
+    ctx.rect(sx * r * 0.62 - (sx > 0 ? r * 0.38 : 0), r * 0.42, r * 0.38, r * 0.28);
+    ctx.fill();
+    ctx.stroke();
   }
   ctx.restore();
 }

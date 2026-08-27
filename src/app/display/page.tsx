@@ -5,6 +5,7 @@ import "../globals.css";
 import "./display.css";
 import type { LeaderboardPayload } from "@/app/api/leaderboard/route";
 import { qrDataUrl, gameUrl } from "@/lib/qr";
+import type { LiveRunner } from "@/app/api/display/live/route";
 
 /**
  * The booth display. Designed to be read from three metres away on whatever
@@ -17,6 +18,7 @@ export default function Display() {
   const [error, setError] = useState(false);
   const prevRanks = useRef<Map<string, number>>(new Map());
   const [moved, setMoved] = useState<Set<string>>(new Set());
+  const [running, setRunning] = useState<LiveRunner[]>([]);
 
   useEffect(() => {
     let alive = true;
@@ -41,6 +43,26 @@ export default function Display() {
     }
     void poll();
     const id = setInterval(poll, 5000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    async function poll() {
+      try {
+        const res = await fetch("/api/display/live", { cache: "no-store" });
+        if (!res.ok) throw new Error("bad status");
+        const json = (await res.json()) as { running: LiveRunner[] };
+        if (alive) setRunning(json.running ?? []);
+      } catch {
+        if (alive) setRunning([]);
+      }
+    }
+    void poll();
+    const id = setInterval(poll, 2000);
     return () => {
       alive = false;
       clearInterval(id);
@@ -82,6 +104,17 @@ export default function Display() {
           </div>
         )}
       </div>
+
+      {running.length > 0 && (
+        <div className="now">
+          <span className="now-label">ON THE COURSE NOW</span>
+          {running.map((r) => (
+            <span className="now-run" key={r.playerId}>
+              {r.name} <b>{r.score}</b>
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="foot">
         <div className="cta">

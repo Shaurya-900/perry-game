@@ -28,6 +28,8 @@ export interface GameHandle {
   /** Begins a run. Returns immediately; the result arrives via onGameOver. */
   start(seed?: number): void;
   toAttract(): void;
+  /** Score as of this frame, for the booth display heartbeat. */
+  liveScore(): number;
 }
 
 interface Props {
@@ -42,6 +44,7 @@ const NOTHING: Input = {
   jumpPressed: false,
   jumpHeld: false,
   slidePressed: false,
+  slideHeld: false,
 };
 
 const GameCanvas = forwardRef<GameHandle, Props>(function GameCanvas(
@@ -72,6 +75,10 @@ const GameCanvas = forwardRef<GameHandle, Props>(function GameCanvas(
       stateRef.current = createGame({ seed: newSeed() });
       botRef.current = newBotMemory();
       modeRef.current = "attract";
+    },
+    liveScore() {
+      const s = stateRef.current;
+      return s ? score(s) : 0;
     },
   }));
 
@@ -130,6 +137,10 @@ const GameCanvas = forwardRef<GameHandle, Props>(function GameCanvas(
         if (f.kind === "collect") sfx.collect();
         else if (f.kind === "golden") sfx.golden();
         else if (f.kind === "plough") sfx.plough();
+        else if (f.kind === "magnet") sfx.magnet();
+        else if (f.kind === "shield") sfx.shield();
+        else if (f.kind === "shield_break") sfx.shieldBreak();
+        else if (f.kind === "slide") sfx.slide();
         else if (f.kind === "jump") sfx.jump();
         else if (f.kind === "best") sfx.best();
         else if (f.kind === "death") sfx.death();

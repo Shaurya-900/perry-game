@@ -6,6 +6,9 @@ import {
   FIXED_DT,
   GOLDEN_TIME,
   GRAVITY,
+  MAGNET_PULL,
+  MAGNET_RADIUS,
+  MAGNET_TIME,
   HITBOX_INSET_TOP,
   HITBOX_INSET_X,
   HOLD_GRAVITY,
@@ -18,6 +21,7 @@ import {
   PLAYER_W,
   PLAYER_X,
   PLOUGH_POINTS,
+  SHIELD_GRACE,
   SLIDE_TIME,
   SPAWN_AHEAD,
   distanceAt,
@@ -47,6 +51,9 @@ export interface GameState {
   bonusPoints: number;
   fedoras: number;
   invT: number;
+  magnetT: number;
+  /** One free hit, held until an obstacle takes it. */
+  shield: boolean;
   dead: boolean;
   deadAt: number;
   fx: Fx[];
@@ -55,7 +62,7 @@ export interface GameState {
 }
 
 export function playerHeight(p: PlayerState): number {
-  return p.slideT > 0 && p.onGround ? PLAYER_SLIDE_H : PLAYER_H;
+  return p.sliding ? PLAYER_SLIDE_H : PLAYER_H;
 }
 
 export function newPlayer(): PlayerState {
@@ -67,6 +74,7 @@ export function newPlayer(): PlayerState {
     holdT: 0,
     slideT: 0,
     slideBuffer: 0,
+    sliding: false,
     jumpBuffer: 0,
     coyote: COYOTE,
   };
@@ -98,6 +106,8 @@ export function createGame(opts: {
     bonusPoints: 0,
     fedoras: 0,
     invT: 0,
+    magnetT: 0,
+    shield: false,
     dead: false,
     deadAt: 0,
     fx: [],
@@ -148,13 +158,17 @@ export function stepPlayer(p: PlayerState, dt: number, input: Input): void {
     p.coyote = Math.max(0, p.coyote - dt);
   }
 
-  if (p.slideBuffer > 0 && p.onGround && p.slideT <= 0) {
+  if (p.slideBuffer > 0 && p.onGround && !p.sliding) {
     p.slideT = SLIDE_TIME;
     p.slideBuffer = 0;
   } else {
     p.slideBuffer = Math.max(0, p.slideBuffer - dt);
     if (p.slideT > 0) p.slideT = Math.max(0, p.slideT - dt);
   }
+  // Holding keeps the duck open. Without this an early duck — the natural
+  // reaction to seeing a gate coming — expires just before the gate and the
+  // player arrives standing.
+  p.sliding = p.onGround && (p.slideT > 0 || input.slideHeld);
 }
 
 /** Does the player box overlap this obstacle at time `t` / camera `camX`? */
@@ -187,16 +201,19 @@ export function step(s: GameState, input: Input): void {
   if (s.dead) return;
   const dt = FIXED_DT;
   const wasAir = !s.player.onGround;
+  const wasSliding = s.player.sliding;
 
   s.t += dt;
   s.camX = distanceAt(s.t);
   s.speed = speedAt(s.t);
   if (s.invT > 0) s.invT = Math.max(0, s.invT - dt);
+  if (s.magnetT > 0) s.magnetT = Math.max(0, s.magnetT - dt);
 
   const p = s.player;
   stepPlayer(p, dt, input);
   if (wasAir && p.onGround) fx(s, "land", PLAYER_X, 0);
   if (!wasAir && !p.onGround) fx(s, "jump", PLAYER_X, 0);
+  if (!wasSliding && p.sliding) fx(s, "slide", PLAYER_X, 0);
 
   generate(s.gen, s.rng, s.obstacles, s.coins, s.camX + SPAWN_AHEAD);
 
@@ -207,6 +224,15 @@ export function step(s: GameState, input: Input): void {
       s.obstacles.splice(i, 1);
       continue;
     }
+    // Near miss: fires once, the first tick the obstacle is fully behind the
+    // player's hitbox. Rewards the tight play the late-game gaps ask for.
+    if (!o.passed && o.x + o.w - s.camX < PLAYER_X + HITBOX_INSET_X) {
+      o.passed = true;
+      const box = obBox(o, s.t);
+      const top = p.y + playerHeight(p) - HITBOX_INSET_TOP;
+      const clearance = Math.min(Math.abs(p.y - box.hi), Math.abs(top - box.lo));
+      if (clearance < 14) fx(s, "nearmiss", PLAYER_X, p.y);
+    }
     if (hits(o, p, s.camX, s.t)) {
       if (s.invT > 0) {
         if (!o.ploughed) {
@@ -214,6 +240,10 @@ export function step(s: GameState, input: Input): void {
           s.bonusPoints += PLOUGH_POINTS;
           fx(s, "plough", o.x - s.camX, obBox(o, s.t).lo);
         }
+      } else if (s.shield) {
+        s.shield = false;
+        s.invT = SHIELD_GRACE;
+        fx(s, "shield_break", PLAYER_X, p.y);
       } else {
         s.dead = true;
         s.deadAt = s.t;
@@ -225,6 +255,21 @@ export function step(s: GameState, input: Input): void {
 
   // Coins
   const h = playerHeight(p);
+  if (s.magnetT > 0) {
+    const px = s.camX + PLAYER_X + PLAYER_W / 2;
+    const py = p.y + h / 2;
+    for (const c of s.coins) {
+      if (c.taken || c.power) continue;
+      const dx = px - c.x;
+      const dy = py - c.y;
+      const d = Math.hypot(dx, dy);
+      if (d > 1 && d < MAGNET_RADIUS) {
+        const k = Math.min(1, (MAGNET_PULL * dt) / d);
+        c.x += dx * k;
+        c.y += dy * k;
+      }
+    }
+  }
   for (let i = s.coins.length - 1; i >= 0; i--) {
     const c = s.coins[i];
     if (c.x - s.camX < -DESPAWN_BEHIND) {
@@ -240,14 +285,26 @@ export function step(s: GameState, input: Input): void {
       c.y - COIN_R < p.y + h
     ) {
       c.taken = true;
-      if (c.golden) {
-        s.invT = GOLDEN_TIME;
-        s.coinPoints += FEDORA_POINTS * 2;
-        fx(s, "golden", cx, c.y);
-      } else {
-        s.fedoras++;
-        s.coinPoints += FEDORA_POINTS;
-        fx(s, "collect", cx, c.y);
+      // Magnet and shield deliberately score nothing, which is what keeps
+      // MAX_SCORE_RATE valid without recomputation.
+      switch (c.power) {
+        case "golden":
+          s.invT = GOLDEN_TIME;
+          s.coinPoints += FEDORA_POINTS * 2;
+          fx(s, "golden", cx, c.y);
+          break;
+        case "magnet":
+          s.magnetT = MAGNET_TIME;
+          fx(s, "magnet", cx, c.y);
+          break;
+        case "shield":
+          s.shield = true;
+          fx(s, "shield", cx, c.y);
+          break;
+        default:
+          s.fedoras++;
+          s.coinPoints += FEDORA_POINTS;
+          fx(s, "collect", cx, c.y);
       }
     }
   }

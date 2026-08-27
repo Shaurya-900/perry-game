@@ -10,11 +10,9 @@ export interface LocalPlayer {
   best: number;
   runsToday: number;
   runsDate: string;
-  lastRunEndedAt: number;
 }
 
 const KEY = "ecell.player";
-export const COOLDOWN_MS = 10_000;
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -66,13 +64,7 @@ export function makePlayer(
     best: 0,
     runsToday: 0,
     runsDate: today(),
-    lastRunEndedAt: 0,
   };
-}
-
-export function cooldownLeft(p: LocalPlayer | null): number {
-  if (!p) return 0;
-  return Math.max(0, COOLDOWN_MS - (Date.now() - p.lastRunEndedAt));
 }
 
 export function firstName(name: string): string {

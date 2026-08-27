@@ -4,7 +4,12 @@ import { botInput, newBotMemory } from "./bot";
 import { createGame, score, step } from "./engine";
 import type { Input } from "./types";
 
-const IDLE: Input = { jumpPressed: false, jumpHeld: false, slidePressed: false };
+const IDLE: Input = {
+  jumpPressed: false,
+  jumpHeld: false,
+  slidePressed: false,
+  slideHeld: false,
+};
 
 /**
  * The fairness test proves a perfect player never dies. This one asks the
