@@ -1,6 +1,33 @@
 import type { Input } from "./types";
 
 /**
+ * True when a keystroke belongs to the page rather than the game.
+ *
+ * The canvas renders in attract mode behind the onboarding overlay, so its
+ * window-level key handler is live while a visitor is typing their name and
+ * email. Without this guard the game's preventDefault() eats every W, S and
+ * space they type — "snu.edu.in" cannot be entered at all.
+ */
+export function isPageKeystroke(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  if (!el || typeof el.tagName !== "string") return false;
+  if (el.isContentEditable) return true;
+  switch (el.tagName) {
+    case "INPUT":
+    case "TEXTAREA":
+    case "SELECT":
+    case "OPTION":
+    // A focused button must still activate on Space, or the leaderboard and
+    // play buttons stop working for anyone navigating by keyboard.
+    case "BUTTON":
+    case "A":
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
  * One thumb, portrait, standing up in a crowd:
  *   tap anywhere        -> jump (hold for a higher one)
  *   tap the lower third -> slide
@@ -98,6 +125,7 @@ export class InputController {
   private onBlur = () => this.reset();
 
   private onKeyDown = (e: KeyboardEvent) => {
+    if (isPageKeystroke(e.target)) return;
     if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") {
       if (!e.repeat) this.pendingJump = true;
       this.held = true;
@@ -108,6 +136,9 @@ export class InputController {
     }
   };
 
+  // Deliberately unguarded: this only releases the held flag and never calls
+  // preventDefault, so it cannot eat a keystroke — and skipping it when focus
+  // moves mid-press would leave the jump button stuck down.
   private onKeyUp = (e: KeyboardEvent) => {
     if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") {
       this.held = false;
