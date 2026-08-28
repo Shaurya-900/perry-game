@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",
+    "@vercel/analytics": "^2.0.1",
     "next": "^15.5.23",
     "qrcode-generator": "^1.4.4",
     "react": "^19.2.0",

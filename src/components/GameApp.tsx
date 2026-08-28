@@ -230,7 +230,7 @@ export default function GameApp() {
       />
 
       {phase !== "playing" && (
-        <button className="mute" onClick={toggleMute} aria-label="toggle sound">
+        <button className="mute" onClick={toggleMute}>
           {muted ? "SOUND OFF" : "SOUND ON"}
         </button>
       )}
