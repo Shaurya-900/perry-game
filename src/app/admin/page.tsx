@@ -42,7 +42,7 @@ function Admin() {
   const maxRuns = Math.max(1, ...(stats?.runsPerHour.map((r) => r.runs) ?? [1]));
 
   return (
-    <main style={S.page}>
+    <main className="doc-page" style={S.page}>
       <h2 style={S.h}>E-Cell Agent Run — admin</h2>
       {error && <p style={S.err}>{error}</p>}
       {stats && (
@@ -71,7 +71,8 @@ function Admin() {
           </p>
 
           <h3 style={S.h}>Runs per hour (UTC)</h3>
-          <div style={S.chart}>
+          <div style={S.scrollX}>
+            <div style={S.chart}>
             {stats.runsPerHour.map((b) => (
               <div key={b.hour} style={S.bar} title={`${b.hour}: ${b.runs}`}>
                 <div
@@ -83,6 +84,7 @@ function Admin() {
                 <span style={S.barLabel}>{b.hour.slice(0, 2)}</span>
               </div>
             ))}
+            </div>
           </div>
 
           <h3 style={S.h}>Export</h3>
@@ -109,6 +111,7 @@ function Admin() {
           </button>
 
           <h3 style={S.h}>Recent sign-ups</h3>
+          <div style={S.scrollX}>
           <table style={S.table}>
             <tbody>
               {stats.recent.map((p) => (
@@ -134,6 +137,7 @@ function Admin() {
               ))}
             </tbody>
           </table>
+          </div>
           <p style={S.mono}>
             Hidden entries are soft-deleted: they keep their rows and can be restored
             with the API, they just leave the board.
@@ -160,17 +164,21 @@ const S: Record<string, React.CSSProperties> = {
     color: "#111",
     padding: 20,
     minHeight: "100vh",
+    width: "100%",
     maxWidth: 900,
     margin: "0 auto",
   },
+  /* Wide children (24-bar chart, 5-column table) scroll in their own lane
+     instead of forcing the whole page sideways on a phone. */
+  scrollX: { overflowX: "auto", maxWidth: "100%" },
   h: { fontFamily: "inherit", fontSize: 18, margin: "22px 0 8px" },
   err: { color: "#b00" },
-  mono: { fontSize: 13, lineHeight: 1.6 },
+  mono: { fontSize: 13, lineHeight: 1.6, overflowWrap: "anywhere" },
   grid: { display: "flex", flexWrap: "wrap", gap: 10 },
   stat: { border: "1px solid #333", padding: "8px 12px", minWidth: 110 },
   statValue: { fontSize: 26, fontWeight: 700 },
   statLabel: { fontSize: 12, textTransform: "uppercase", color: "#555" },
-  chart: { display: "flex", alignItems: "flex-end", gap: 3, height: 130 },
+  chart: { display: "flex", alignItems: "flex-end", gap: 3, height: 130, minWidth: 480 },
   bar: {
     flex: 1,
     height: "100%",
@@ -181,7 +189,7 @@ const S: Record<string, React.CSSProperties> = {
   },
   barFill: { width: "100%", background: "#2c6fb5", minHeight: 2 },
   barLabel: { fontSize: 9, color: "#666" },
-  table: { borderCollapse: "collapse", width: "100%", fontSize: 13 },
+  table: { borderCollapse: "collapse", width: "100%", fontSize: 13, minWidth: 520 },
   td: { borderBottom: "1px solid #ddd", padding: "5px 6px" },
   link: { color: "#2c6fb5" },
   btn: { padding: "8px 12px", fontSize: 14, cursor: "pointer" },

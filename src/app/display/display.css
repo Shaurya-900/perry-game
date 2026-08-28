@@ -3,11 +3,20 @@
   inset: 0;
   background: var(--ink);
   color: var(--paper);
-  display: grid;
-  grid-template-rows: auto 1fr auto;
+  display: flex;
+  flex-direction: column;
   padding: 2.2vh 2.4vw;
   gap: 1.6vh;
   overflow: hidden;
+}
+
+/* Only the board flexes. Every other band is sized by its content, so adding
+   another one can never push a row through the band below it. */
+.display .head,
+.display .now,
+.display .ecell,
+.display .foot {
+  flex: none;
 }
 
 .display .head {
@@ -48,6 +57,7 @@
 }
 
 .display .lb-rows {
+  flex: 1 1 auto;
   display: grid;
   grid-template-columns: 1fr;
   /* minmax(0, 1fr) matters: without it a long name grows the track and the
@@ -68,19 +78,33 @@
   gap: 1.4vw;
   background: var(--paper);
   color: var(--ink);
-  border: 4px solid var(--paper);
+  border: 2px solid var(--paper);
   padding: 0 1.6vw;
   font-family: var(--comic);
-  /* line-height 1 keeps a row exactly one line tall, so ten of them always fit
-     between the header and the footer on any monitor. */
   line-height: 1;
-  font-size: 4.4vh;
+  /*
+   * How tall a row actually is depends on how many bands are on screen, which
+   * changes at runtime as the live band appears and disappears. A fixed vh
+   * font size is therefore always a guess about one particular layout, and
+   * when the guess is too big the glyphs are taller than the row and
+   * `overflow: hidden` slices them — which reads as overlapping text.
+   *
+   * Sizing from the row's own height instead makes the text fit whatever the
+   * layout hands it. The vh value below is only a fallback for engines
+   * without container query units.
+   */
+  container-type: size;
+  font-size: 2.6vh;
   transition: transform 340ms ease, background 500ms ease;
 }
 
 .display .lb-row .rank {
   color: var(--red);
-  font-size: 4vh;
+  font-size: 66cqh;
+}
+
+.display .lb-row .name {
+  font-size: 74cqh;
 }
 
 .display .lb-row .name {
@@ -100,7 +124,7 @@
 }
 
 .display .lb-row .score {
-  font-size: 5vh;
+  font-size: 78cqh;
 }
 
 .display .lb-row.moved {
@@ -131,6 +155,40 @@
     transform: none;
     opacity: 1;
   }
+}
+
+.display .ecell {
+  display: grid;
+  grid-template-columns: 11vh minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1.4vw;
+  padding: 0 1.6vw;
+  border: 4px solid var(--gold);
+  background: var(--ink);
+  color: var(--gold);
+  font-family: var(--comic);
+  line-height: 1;
+  font-size: 3.4vh;
+  padding-top: 0.7vh;
+  padding-bottom: 0.7vh;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.display .ecell .rank {
+  font-size: 3vh;
+  color: var(--red);
+}
+
+.display .ecell .name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.display .ecell .score {
+  font-size: 3.8vh;
 }
 
 .display .foot {
@@ -186,15 +244,17 @@
 .display .now {
   display: flex;
   align-items: center;
-  gap: 18px;
-  flex-wrap: wrap;
-  padding: 10px 18px;
-  margin-top: 10px;
-  border: 4px solid var(--ink, #141110);
+  gap: 1.4vw;
+  padding: 0.8vh 1.6vw;
+  border: 4px solid var(--paper);
   background: #fffaf0;
-  font-family: var(--comic, "Bangers", Impact, sans-serif);
-  font-size: 30px;
+  color: var(--ink);
+  font-family: var(--comic);
+  font-size: 3vh;
+  line-height: 1;
   letter-spacing: 1px;
+  /* One line, clipped — it must never wrap and grow the band. */
+  white-space: nowrap;
   overflow: hidden;
 }
 

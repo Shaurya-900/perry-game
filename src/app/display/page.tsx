@@ -69,6 +69,13 @@ export default function Display() {
     };
   }, []);
 
+  /**
+   * House entry. Not a player and never fetched — it sits below the board as a
+   * fixed bar the crowd is meant to read as a joke, and as the thing nobody is
+   * going to beat.
+   */
+  const ECELL = { rank: 6767, name: "E-CELL", score: 4206789 };
+
   // Generated on the client only: the QR needs a canvas.
   const [qr, setQr] = useState("");
   useEffect(() => setQr(qrDataUrl(gameUrl(), 420)), []);
@@ -103,6 +110,12 @@ export default function Display() {
             {error ? "RECONNECTING…" : "NO AGENTS YET. BE THE FIRST."}
           </div>
         )}
+      </div>
+
+      <div className="ecell">
+        <span className="rank">#{ECELL.rank}</span>
+        <span className="name">{ECELL.name}</span>
+        <span className="score">{ECELL.score.toLocaleString("en-IN")}</span>
       </div>
 
       {running.length > 0 && (

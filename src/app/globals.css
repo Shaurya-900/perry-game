@@ -35,12 +35,50 @@ body {
   -webkit-user-select: none;
 }
 
+/* Data pages are for reading and copying, not for thumbs. */
+.doc-page,
+.doc-page * {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/*
+ * The game's buttons are deliberately huge and full-width for one thumb. On a
+ * data page that is wrong: `width: 100%` stretches a table row's "hide"
+ * control across the entire row and the comic face is unreadable at this size.
+ */
+.doc-page button {
+  width: auto;
+  font-family: inherit;
+  letter-spacing: 0;
+  border: 1px solid #333;
+  background: #fff;
+  color: #111;
+  box-shadow: none;
+}
+
+.doc-page button:active {
+  transform: none;
+  box-shadow: none;
+}
+
 #app {
   position: fixed;
   inset: 0;
   display: flex;
   justify-content: center;
   background: var(--ink);
+  /* The game never overflows (.stage is height:100% + overflow:hidden), but
+     /admin is a long document inside this same fixed shell — without this it
+     is simply clipped at the viewport with no way to reach the rest. */
+  overflow: auto;
+  /*
+   * Without this a stretched child is exactly viewport-tall no matter how long
+   * its content is, so /admin painted its white background for one screen and
+   * everything below scrolled out over the dark shell, dark-on-dark. The game
+   * is unaffected: .stage sets height:100% explicitly.
+   */
+  align-items: flex-start;
 }
 
 .stage {
