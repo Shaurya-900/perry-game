@@ -12,8 +12,10 @@ import {
   GATE_W,
   LASER_W,
   MAX_SCORE_RATE,
+  PATROL_W,
   PLAYER_W,
   PLAYER_X,
+  SPIKES_W,
   SLIDE_TIME,
   TOWER_W,
 } from "./constants";
@@ -109,6 +111,8 @@ describe("obstacle generator", () => {
       laser: LASER_W,
       drone: DRONE_W,
       gate: GATE_W,
+      spikes: SPIKES_W,
+      patrol: PATROL_W,
     };
     expect(MAX_PATTERN_SPAN).toBeGreaterThan(0);
     for (const p of PATTERNS) {

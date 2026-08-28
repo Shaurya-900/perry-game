@@ -55,20 +55,22 @@ function enqueue(run: PendingRun): void {
 }
 
 async function post<T>(url: string, body: unknown, timeoutMs = 6000): Promise<T | null> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
       signal: ctrl.signal,
     });
-    clearTimeout(timer);
     if (!res.ok) return null;
     return (await res.json()) as T;
   } catch {
     return null;
+  } finally {
+    // A thrown fetch used to skip this, leaving the abort timer live.
+    clearTimeout(timer);
   }
 }
 
@@ -112,29 +114,44 @@ export async function submitRun(run: PendingRun): Promise<SubmitResult | null> {
   }
 }
 
-/** Retry anything stranded by a dropped connection. */
+/**
+ * Retry anything stranded by a dropped connection.
+ *
+ * The queue is never emptied up front. Doing that lost every pending run if the
+ * phone was closed mid-flush — likely at a booth, where the handset gets handed
+ * straight back — and it also clobbered any run submitted while the flush was
+ * still in flight. Instead each run is marked done only once it is genuinely
+ * settled, and the queue is re-read at the end so concurrent additions survive.
+ */
 export async function flushQueue(): Promise<number> {
   const q = readQueue();
   if (!q.length) return 0;
-  writeQueue([]);
-  const stillPending: PendingRun[] = [];
+  const settled = new Set<string>();
   let sent = 0;
   for (const run of q) {
     // Tokens expire after ten minutes; older runs are unrecoverable.
-    if (Date.now() - run.at > 9 * 60 * 1000) continue;
+    if (Date.now() - run.at > 9 * 60 * 1000) {
+      settled.add(run.token);
+      continue;
+    }
     try {
       const res = await fetch("/api/run/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(run),
       });
-      if (res.ok) sent++;
-      else if (res.status >= 500 || res.status === 429) stillPending.push(run);
+      if (res.ok) {
+        sent++;
+        settled.add(run.token);
+      } else if (res.status < 500 && res.status !== 429) {
+        // A terminal 4xx will never be accepted; keeping it is just noise.
+        settled.add(run.token);
+      }
     } catch {
-      stillPending.push(run);
+      /* keep it queued for the next attempt */
     }
   }
-  writeQueue(stillPending);
+  writeQueue(readQueue().filter((r) => !settled.has(r.token)));
   return sent;
 }
 

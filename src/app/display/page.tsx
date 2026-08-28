@@ -17,6 +17,8 @@ export default function Display() {
   const [data, setData] = useState<LeaderboardPayload | null>(null);
   const [error, setError] = useState(false);
   const prevRanks = useRef<Map<string, number>>(new Map());
+  /** No previous ranks on the first poll, so nothing has "moved" yet. */
+  const seeded = useRef(false);
   const [moved, setMoved] = useState<Set<string>>(new Set());
   const [running, setRunning] = useState<LiveRunner[]>([]);
 
@@ -29,11 +31,16 @@ export default function Display() {
         const json = (await res.json()) as LeaderboardPayload;
         if (!alive) return;
         const changed = new Set<string>();
-        for (const row of json.top) {
-          const before = prevRanks.current.get(row.playerId);
-          if (before === undefined || before > row.rank) changed.add(row.playerId);
+        // Without the seeded guard every row is "new" on the first poll, so the
+        // whole board played its climb animation at once on load.
+        if (seeded.current) {
+          for (const row of json.top) {
+            const before = prevRanks.current.get(row.playerId);
+            if (before === undefined || before > row.rank) changed.add(row.playerId);
+          }
         }
         prevRanks.current = new Map(json.top.map((r) => [r.playerId, r.rank]));
+        seeded.current = true;
         setMoved(changed);
         setData(json);
         setError(false);

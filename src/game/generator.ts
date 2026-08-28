@@ -10,6 +10,11 @@ import {
   GATE_HIGH,
   GATE_LOW,
   GATE_W,
+  PATROL_MAX_C,
+  PATROL_MIN_C,
+  PATROL_W,
+  SPIKES_H,
+  SPIKES_W,
   LASER_EMITTER_H,
   LASER_HIGH,
   LASER_LOW,
@@ -59,6 +64,8 @@ export const PATTERNS: Pattern[] = [
   // The only pattern that cannot be jumped. Held back to ~13 s so a first-timer
   // meets it after they have the hang of jumping, not before.
   { name: "gate", items: [{ dx: 0, kind: "gate" }], recovery: "slide", minLevel: 0.2 },
+  { name: "spikes", items: [{ dx: 0, kind: "spikes" }], recovery: "jump", minLevel: 0.15 },
+  { name: "patrol", items: [{ dx: 0, kind: "patrol" }], recovery: "react", minLevel: 0.4 },
   { name: "tower", items: [{ dx: 0, kind: "tower" }], recovery: "bigjump", minLevel: 0.12 },
   // Multi-obstacle patterns are spaced in PIXELS and kept inside
   // MAX_PATTERN_SPAN so the whole shape is on screen before the player has to
@@ -193,6 +200,30 @@ function makeObstacle(
       return { id, kind, x, w: LASER_W, yLow: LASER_LOW, yHigh: LASER_HIGH, variant };
     case "gate":
       return { id, kind, x, w: GATE_W, yLow: GATE_LOW, yHigh: GATE_HIGH, variant };
+    case "spikes":
+      return { id, kind, x, w: SPIKES_W, yLow: 0, yHigh: SPIKES_H, variant };
+    case "patrol": {
+      // Sweeps a band that spans the duck/jump boundary, so the answer depends
+      // on where it happens to be. Amplitude grows with difficulty.
+      const cy = randRange(rng, PATROL_MIN_C + 20, PATROL_MAX_C - 20);
+      const amp = Math.min(
+        randRange(rng, 34, 52) * (0.55 + 0.45 * level),
+        Math.min(cy - PATROL_MIN_C, PATROL_MAX_C - cy),
+      );
+      return {
+        id,
+        kind,
+        x,
+        w: PATROL_W,
+        yLow: cy - DRONE_HALF_H,
+        yHigh: cy + DRONE_HALF_H,
+        cy,
+        amp,
+        om: randRange(rng, 1.1, 1.9),
+        ph: randRange(rng, 0, Math.PI * 2),
+        variant,
+      };
+    }
     case "drone": {
       // Centre band shrinks inwards at low difficulty so early drones sit high
       // and read easily. Any centre in [DRONE_MIN_C, DRONE_MAX_C] is clearable:

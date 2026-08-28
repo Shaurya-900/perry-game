@@ -46,6 +46,11 @@ export default function GameApp() {
 
   const gameRef = useRef<GameHandle>(null);
   const tokenRef = useRef<{ token: string; seed: number; at: number } | null>(null);
+  /**
+   * The token the run currently in progress will submit with. Held separately
+   * so the NEXT run's token can be fetched while this one is being played.
+   */
+  const runTokenRef = useRef<{ token: string; seed: number; at: number } | null>(null);
   const playerRef = useRef<LocalPlayer | null>(null);
   playerRef.current = player;
   const challengeRef = useRef<Challenge | null>(null);
@@ -128,7 +133,14 @@ export default function GameApp() {
     setIsBest(false);
     setQueued(false);
     setRun(null);
-    gameRef.current?.start(tokenRef.current?.seed);
+    // Claim this run's token and immediately start fetching the next one, so
+    // the whole run is available to cover that request. Fetching it at game
+    // over instead meant an instant PLAY AGAIN raced the network and the run
+    // came out untokenised — which is silently unscoreable.
+    runTokenRef.current = tokenRef.current;
+    tokenRef.current = null;
+    void primeToken();
+    gameRef.current?.start(runTokenRef.current?.seed);
     setPhase("playing");
     track(p.runsToday === 0 ? "first_run" : "run_start");
     if (challengeRef.current) track("challenge_accepted");
@@ -158,9 +170,8 @@ export default function GameApp() {
         setChallenge(null);
       }
 
-      const tok = tokenRef.current;
-      tokenRef.current = null;
-      void primeToken();
+      const tok = runTokenRef.current;
+      runTokenRef.current = null;
       if (!tok) {
         setQueued(false);
         return;
@@ -194,7 +205,7 @@ export default function GameApp() {
   // letting the row go stale handles a closed tab identically, for free.
   useEffect(() => {
     if (phase !== "playing") return;
-    const token = tokenRef.current?.token;
+    const token = runTokenRef.current?.token;
     if (!token) return;
     const id = setInterval(() => {
       sendLive(token, gameRef.current?.liveScore() ?? 0);

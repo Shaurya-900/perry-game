@@ -40,6 +40,8 @@ const MIN_ANSWER: Record<string, number> = {
   gate: 0.1,
   tower: 0.3,
   drone: 0.24,
+  spikes: 0.2,
+  patrol: 0.26,
 };
 
 const HOLD_DURATIONS = [0, 0.12, 0.24, MAX_HOLD];

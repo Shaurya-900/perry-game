@@ -1,4 +1,11 @@
-export type ObKind = "crate" | "tower" | "laser" | "drone" | "gate";
+export type ObKind =
+  | "crate"
+  | "tower"
+  | "laser"
+  | "drone"
+  | "gate"
+  | "spikes"
+  | "patrol";
 
 export interface Obstacle {
   id: number;

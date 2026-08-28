@@ -346,6 +346,36 @@ export function drawGate(
   ctx.restore();
 }
 
+/** Ground spikes: a low, wide row of ink teeth. */
+export function drawSpikes(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  lw = 3,
+) {
+  const teeth = 5;
+  const tw = w / teeth;
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  for (let i = 0; i < teeth; i++) {
+    ctx.lineTo(i * tw + tw / 2, -h);
+    ctx.lineTo((i + 1) * tw, 0);
+  }
+  ctx.closePath();
+  ctx.fillStyle = "#8A8F9E";
+  ctx.fill();
+  ink(ctx, lw);
+  ctx.stroke();
+  // Base plate, so they read as bolted down rather than floating.
+  ctx.beginPath();
+  ctx.rect(-4, -6, w + 8, 8);
+  ctx.fillStyle = "#4A4E69";
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
 /** Hovering drone with a spinning rotor. */
 export function drawDrone(
   ctx: CanvasRenderingContext2D,
@@ -353,13 +383,15 @@ export function drawDrone(
   halfH: number,
   t: number,
   lw = 3,
+  body = "#4A4E69",
+  eye = RED,
 ) {
   ctx.save();
   ctx.translate(w / 2, 0);
-  blob(ctx, 0, 0, w / 2, halfH, "#4A4E69", lw);
+  blob(ctx, 0, 0, w / 2, halfH, body, lw);
   ctx.beginPath();
   ctx.arc(3, -2, halfH * 0.42, 0, Math.PI * 2);
-  ctx.fillStyle = RED;
+  ctx.fillStyle = eye;
   ctx.fill();
   ink(ctx, lw - 1);
   ctx.stroke();

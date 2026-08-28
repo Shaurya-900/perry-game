@@ -109,6 +109,22 @@ export const GATE_W = 58;
 export const GATE_LOW = 48;
 export const GATE_HIGH = 340;
 
+/**
+ * Ground spikes: lower than a crate but much wider, so the jump has to be
+ * committed to earlier rather than cleared higher.
+ */
+export const SPIKES_W = 78;
+export const SPIKES_H = 30;
+
+/**
+ * Patrol drone. Same machinery as a drone, but it sweeps a band wide enough to
+ * cross the duck/jump boundary — so the right answer depends on where it is
+ * when you arrive, not on what kind of obstacle it is.
+ */
+export const PATROL_W = 40;
+export const PATROL_MIN_C = 46;
+export const PATROL_MAX_C = 150;
+
 export const DRONE_W = 36;
 export const DRONE_HALF_H = 14;
 /** Drone centre oscillates between these heights. */

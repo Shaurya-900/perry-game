@@ -19,13 +19,14 @@ import {
   drawGate,
   drawLaser,
   drawMagnet,
+  drawSpikes,
   drawShield,
   drawTower,
 } from "./art";
 import type { GameState } from "./engine";
 import { playerHeight, score } from "./engine";
 import { obBox } from "./generator";
-import { BLUE, COMIC_FONT, GOLD, INK, PAPER, PAPER_DARK, RED, SKY } from "./palette";
+import { BLUE, COMIC_FONT, GOLD, INK, PAPER, PAPER_DARK, PURPLE, RED, SKY } from "./palette";
 import type { Fx } from "./types";
 
 interface Particle {
@@ -67,7 +68,7 @@ function halftoneTile(size: number, dot: number, color: string): HTMLCanvasEleme
 }
 
 /** Pre-rendered drifting cloud band, so the sky above the action is not dead space. */
-function cloudTile(w: number, h: number): HTMLCanvasElement {
+function cloudTile(w: number, h: number, fill: string, shadow: string): HTMLCanvasElement {
   const c = document.createElement("canvas");
   c.width = w;
   c.height = h;
@@ -99,9 +100,9 @@ function cloudTile(w: number, h: number): HTMLCanvasElement {
     }
     x.fill();
   };
-  x.fillStyle = "rgba(20,17,16,0.16)";
+  x.fillStyle = shadow;
   for (const cl of clouds) puff(cl, 4);
-  x.fillStyle = "rgba(255,255,255,0.9)";
+  x.fillStyle = fill;
   for (const cl of clouds) puff(cl, 0);
   return c;
 }
@@ -133,6 +134,36 @@ function skylineTile(w: number, h: number, fill: string, seed: number): HTMLCanv
   return c;
 }
 
+/** Seconds of steady daylight, then of steady night. */
+const DAY_LENGTH = 42;
+/** Seconds spent crossfading between the two. */
+const NIGHT_FADE = 5;
+
+/**
+ * 0 = full day, 1 = full night. A pure function of run time, so it costs the
+ * simulation nothing and cannot affect a replay — the whole cycle lives in the
+ * renderer. The period is tuned so a typical run sees one changeover and a good
+ * run sees the way back, which makes nightfall feel earned rather than random.
+ */
+export function nightAt(t: number): number {
+  const period = (DAY_LENGTH + NIGHT_FADE) * 2;
+  const p = ((t % period) + period) % period;
+  if (p < DAY_LENGTH) return 0;
+  if (p < DAY_LENGTH + NIGHT_FADE) return (p - DAY_LENGTH) / NIGHT_FADE;
+  if (p < DAY_LENGTH * 2 + NIGHT_FADE) return 1;
+  return 1 - (p - (DAY_LENGTH * 2 + NIGHT_FADE)) / NIGHT_FADE;
+}
+
+/** Blend two #rrggbb colours. Used for the surfaces that are filled, not blitted. */
+function mix(a: string, b: string, t: number): string {
+  const pa = parseInt(a.slice(1), 16);
+  const pb = parseInt(b.slice(1), 16);
+  const r = Math.round((((pa >> 16) & 255) * (1 - t)) + (((pb >> 16) & 255) * t));
+  const g = Math.round((((pa >> 8) & 255) * (1 - t)) + (((pb >> 8) & 255) * t));
+  const bl = Math.round(((pa & 255) * (1 - t)) + ((pb & 255) * t));
+  return `rgb(${r},${g},${bl})`;
+}
+
 /** Highest point the player can ever reach, plus a little air. */
 const MIN_HEADROOM = 400;
 
@@ -155,6 +186,10 @@ export class Renderer {
   private far: HTMLCanvasElement;
   private mid: HTMLCanvasElement;
   private clouds: HTMLCanvasElement;
+  private farNight: HTMLCanvasElement;
+  private midNight: HTMLCanvasElement;
+  private cloudsNight: HTMLCanvasElement;
+  private backdropNight: HTMLCanvasElement | null = null;
   private particles: Particle[] = [];
   private bursts: Burst[] = [];
   private shake = 0;
@@ -170,7 +205,11 @@ export class Renderer {
     this.ctx = canvas.getContext("2d", { alpha: false })!;
     this.far = skylineTile(WORLD_W, 150, "#9DC7DC", 7);
     this.mid = skylineTile(WORLD_W, 110, "#6E9EBB", 19);
-    this.clouds = cloudTile(WORLD_W, 120);
+    this.clouds = cloudTile(WORLD_W, 120, "rgba(255,255,255,0.9)", "rgba(20,17,16,0.16)");
+    // Same seeds, so the skyline is the same city after dark.
+    this.farNight = skylineTile(WORLD_W, 150, "#2B3A5B", 7);
+    this.midNight = skylineTile(WORLD_W, 110, "#1B2740", 19);
+    this.cloudsNight = cloudTile(WORLD_W, 120, "rgba(120,132,170,0.75)", "rgba(0,0,0,0.25)");
     this.resize();
   }
 
@@ -193,34 +232,59 @@ export class Renderer {
       this.worldH - 90,
       Math.max(MIN_HEADROOM, this.worldH * 0.78),
     );
-    this.buildBackdrop();
+    this.backdrop = this.buildBackdrop(false) ?? null;
+    this.backdropNight = this.buildBackdrop(true) ?? null;
   }
 
   /** Pre-renders everything in the background that never moves. */
-  private buildBackdrop(): void {
+  private buildBackdrop(night: boolean): HTMLCanvasElement | undefined {
     const pw = Math.max(1, Math.round(WORLD_W * this.scale * this.dpr));
     const ph = Math.max(1, Math.round(this.worldH * this.scale * this.dpr));
     const c = document.createElement("canvas");
     c.width = pw;
     c.height = ph;
     const g = c.getContext("2d");
-    if (!g) return;
+    if (!g) return undefined;
     const k = this.scale * this.dpr;
     g.setTransform(k, 0, 0, k, 0, 0);
 
     const grad = g.createLinearGradient(0, 0, 0, this.groundY);
-    grad.addColorStop(0, "#8EC5E0");
-    grad.addColorStop(0.62, SKY);
-    grad.addColorStop(1, "#E8F1F4");
+    if (night) {
+      grad.addColorStop(0, "#0E1430");
+      grad.addColorStop(0.62, "#25325C");
+      grad.addColorStop(1, "#4A5580");
+    } else {
+      grad.addColorStop(0, "#8EC5E0");
+      grad.addColorStop(0.62, SKY);
+      grad.addColorStop(1, "#E8F1F4");
+    }
     g.fillStyle = grad;
     g.fillRect(0, 0, WORLD_W, this.worldH);
 
-    const pat = g.createPattern(halftoneTile(10, 1.7, "rgba(20,17,16,0.16)"), "repeat");
+    // Stars cost nothing here: they are baked in once, not drawn per frame.
+    if (night) {
+      let n = 1337;
+      const rnd = () => ((n = (n * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+      for (let i = 0; i < 70; i++) {
+        const sx = rnd() * WORLD_W;
+        const sy = rnd() * this.groundY * 0.8;
+        const r = 0.7 + rnd() * 1.4;
+        g.globalAlpha = 0.35 + rnd() * 0.6;
+        g.fillStyle = "#FFFFFF";
+        g.beginPath();
+        g.arc(sx, sy, r, 0, Math.PI * 2);
+        g.fill();
+      }
+      g.globalAlpha = 1;
+    }
+
+    const dots = night ? "rgba(255,255,255,0.06)" : "rgba(20,17,16,0.16)";
+    const pat = g.createPattern(halftoneTile(10, 1.7, dots), "repeat");
     if (pat) {
       g.fillStyle = pat;
       g.fillRect(0, 0, WORLD_W, this.groundY);
     }
-    this.backdrop = c;
+    return c;
   }
 
   addShake(a: number): void {
@@ -351,21 +415,41 @@ export class Renderer {
     const shy = this.shake ? (Math.random() - 0.5) * this.shake : 0;
 
     // ---- Sky ---- one blit instead of a gradient fill plus a pattern fill.
-    if (this.backdrop) {
+    const night = nightAt(s.t);
+    if (this.backdrop && night < 1) {
       ctx.drawImage(this.backdrop, 0, 0, WORLD_W, this.worldH);
+    }
+    if (this.backdropNight && night > 0) {
+      ctx.save();
+      ctx.globalAlpha = night;
+      ctx.drawImage(this.backdropNight, 0, 0, WORLD_W, this.worldH);
+      ctx.restore();
     }
 
     ctx.save();
     ctx.translate(shx, shy);
 
     // ---- Parallax ----
-    this.strip(this.clouds, camX * 0.04, Math.max(6, this.groundY - 560));
-    this.strip(this.clouds, camX * 0.07, Math.max(90, this.groundY - 400));
-    this.strip(this.far, camX * 0.12, this.groundY - 150);
-    this.strip(this.mid, camX * 0.32, this.groundY - 96);
+    const cloudHi = Math.max(6, this.groundY - 560);
+    const cloudLo = Math.max(90, this.groundY - 400);
+    if (night < 1) {
+      this.strip(this.clouds, camX * 0.04, cloudHi);
+      this.strip(this.clouds, camX * 0.07, cloudLo);
+      this.strip(this.far, camX * 0.12, this.groundY - 150);
+      this.strip(this.mid, camX * 0.32, this.groundY - 96);
+    }
+    if (night > 0) {
+      ctx.save();
+      ctx.globalAlpha = night;
+      this.strip(this.cloudsNight, camX * 0.04, cloudHi);
+      this.strip(this.cloudsNight, camX * 0.07, cloudLo);
+      this.strip(this.farNight, camX * 0.12, this.groundY - 150);
+      this.strip(this.midNight, camX * 0.32, this.groundY - 96);
+      ctx.restore();
+    }
 
     // ---- Ground ----
-    ctx.fillStyle = "#C7B292";
+    ctx.fillStyle = mix("#C7B292", "#4A4636", night);
     ctx.fillRect(0, this.groundY, WORLD_W, this.worldH - this.groundY);
     ctx.strokeStyle = INK;
     ctx.lineWidth = 4;
@@ -390,7 +474,7 @@ export class Renderer {
     // a caption strip along the very bottom of the panel.
     const bandTop = this.groundY + 46;
     if (bandTop < this.worldH) {
-      ctx.fillStyle = "#8C7457";
+      ctx.fillStyle = mix("#8C7457", "#2F2A22", night);
       ctx.fillRect(0, bandTop, WORLD_W, this.worldH - bandTop);
       ctx.strokeStyle = "rgba(20,17,16,0.5)";
       ctx.lineWidth = 3;
@@ -457,10 +541,15 @@ export class Renderer {
       else if (o.kind === "tower") drawTower(ctx, o.w, o.yHigh, o.variant);
       else if (o.kind === "laser") drawLaser(ctx, o.w, o.yLow, o.yHigh, s.t);
       else if (o.kind === "gate") drawGate(ctx, o.w, o.yLow, o.yHigh, s.t);
+      else if (o.kind === "spikes") drawSpikes(ctx, o.w, o.yHigh);
       else {
         const box = obBox(o, s.t);
         ctx.translate(0, -(box.lo + DRONE_HALF_H));
-        drawDrone(ctx, o.w, DRONE_HALF_H, s.t);
+        if (o.kind === "patrol") {
+          drawDrone(ctx, o.w, DRONE_HALF_H, s.t, 3, PURPLE, GOLD);
+        } else {
+          drawDrone(ctx, o.w, DRONE_HALF_H, s.t);
+        }
       }
       ctx.restore();
     }
