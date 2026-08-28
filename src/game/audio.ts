@@ -92,7 +92,6 @@ function noise(dur: number, gain = 0.6) {
 
 export const sfx = {
   jump: () => tone(300, 0.12, "square", 0.5, 620),
-  slide: () => noise(0.16, 0.35),
   collect: () => {
     tone(880, 0.07, "square", 0.4);
     setTimeout(() => tone(1320, 0.08, "square", 0.35), 55);

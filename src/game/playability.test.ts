@@ -32,7 +32,7 @@ function playHuman(latency: number, slop: number, seed: number, maxT = 240) {
   const rand = () => ((rnd = (rnd * 9301 + 49297) % 233280) / 233280);
   for (let f = 0; f < 60 * maxT && !s.dead; f++) {
     const raw = botInput(s, mem);
-    if (!running && !pending && (raw.jumpPressed || raw.slidePressed)) {
+    if (!running && !pending && raw.jumpPressed) {
       const plan = mem.plan.length && mem.planIdx > 0 ? mem.plan.slice() : [raw];
       if (rand() >= slop) pending = { at: f + delay, plan };
     }

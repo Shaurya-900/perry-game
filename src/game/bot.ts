@@ -7,7 +7,7 @@ import {
   distanceAt,
   speedAt,
 } from "./constants";
-import { hits, playerHeight, stepPlayer } from "./engine";
+import { hits, stepPlayer } from "./engine";
 import type { GameState } from "./engine";
 import type { Input, Obstacle, PlayerState } from "./types";
 
@@ -29,7 +29,7 @@ const DECIDE_LEAD = 0.5;
 
 /**
  * Minimum time needed to answer each obstacle type from a standing start —
- * derived from the physics: time to rise clear of it, or to duck.
+ * derived from the physics: time to rise clear of it.
  * A rollout counts as survived once the player is back on the ground with at
  * least this much time before the next obstacle, i.e. genuinely able to chain
  * into the next answer.
@@ -225,5 +225,5 @@ export function nextObstacle(s: GameState): Obstacle | null {
 }
 
 export function debugPlayer(p: PlayerState): string {
-  return `y=${p.y.toFixed(1)} vy=${p.vy.toFixed(0)} h=${playerHeight(p)}`;
+  return `y=${p.y.toFixed(1)} vy=${p.vy.toFixed(0)}`;
 }

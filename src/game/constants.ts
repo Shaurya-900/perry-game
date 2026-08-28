@@ -14,7 +14,6 @@ export const GROUND_Y = 640;
 export const PLAYER_X = 84;
 export const PLAYER_W = 44;
 export const PLAYER_H = 56;
-export const PLAYER_SLIDE_H = 28;
 /**
  * Collision forgiveness. The drawn character is PLAYER_W x PLAYER_H, but the
  * box that kills is inset — near-misses read as skill, not as bugs. Standard
@@ -37,7 +36,6 @@ export const FAST_FALL_GRAVITY = 5200;
 export const JUMP_V = 820;
 /** Holding longer than this stops helping (spec: ~450ms). */
 export const MAX_HOLD = 0.45;
-export const SLIDE_TIME = 0.5;
 /** Tap buffer: a jump pressed this long before landing still fires. */
 export const JUMP_BUFFER = 0.12;
 /** Coyote time after walking off nothing (kept tiny, it is a runner). */
@@ -54,14 +52,15 @@ export const MAX_MULT = 2.2;
 /** Seconds to reach MAX_MULT (linear ramp). */
 export const RAMP_TIME = 90;
 
-/** World px per point of distance score ("one metre"). */
-export const METRE = 10;
+/** World px per point of distance score. Deliberately coarse: the counter
+ *  should tick, not blur. */
+export const METRE = 25;
 
-export const FEDORA_POINTS = 50;
+export const FEDORA_POINTS = 20;
 /** Seconds of invincibility from a golden fedora. */
 export const GOLDEN_TIME = 4;
 /** Points per obstacle ploughed through while invincible. */
-export const PLOUGH_POINTS = 75;
+export const PLOUGH_POINTS = 30;
 
 /** Seconds the magnet stays active. */
 export const MAGNET_TIME = 5;
@@ -133,7 +132,7 @@ export const FIXED_DT = 1 / 60;
  * over-generous greedy collector; keep ~1.5x of headroom above it so no real
  * player is ever rejected. Raise this if coin density or scoring changes.
  */
-export const MAX_SCORE_RATE = 300;
+export const MAX_SCORE_RATE = 140;
 
 export function speedAt(t: number): number {
   const m = 1 + (MAX_MULT - 1) * Math.min(1, t / RAMP_TIME);

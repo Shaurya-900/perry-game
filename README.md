@@ -70,15 +70,21 @@ camera position is a closed-form integral of the speed curve, so a run is
 identical on a 60 Hz phone and a 120 Hz one, and any run can be replayed from
 its seed. The seed comes from the server at `POST /api/run/start`.
 
+**The controls.** One button: tap anywhere to jump, hold for a higher one.
+There is nothing else to learn — every obstacle in the game is answered by a
+jump of the right height at the right moment.
+
 **The difficulty curve.** Speed ramps linearly from 200 world px/s to 2.2× that
 over 90 seconds. The base speed is picked so that even at the 2.2× ceiling an
 obstacle entering the right edge of the screen still leaves ~0.7 s of reaction
-time.
+time. A second, slower ramp (`pressureAt`, 180 s) keeps tightening the gap
+between patterns after the speed curve has topped out, so a long run keeps
+getting harder instead of plateauing.
 
 **Obstacle generation.** The generator never places obstacles by pixel gap. It
 places them by *time* gap at the speed the player will actually be travelling
 when they arrive: reaction time plus the recovery time for the previous answer
-(a held jump costs more than a slide). Multi-obstacle patterns are spaced in
+(a held jump costs more than a small one). Multi-obstacle patterns are spaced in
 fixed pixels and capped at `MAX_PATTERN_SPAN`, so the whole shape is on screen
 before the player has to commit to a jump.
 
