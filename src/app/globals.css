@@ -320,6 +320,15 @@ input:focus {
   color: #7b4ba8;
 }
 
+/* Deliberately quieter than .sub: present, but never competing with PLAY. */
+.credit {
+  font-family: var(--comic);
+  font-size: 14px;
+  letter-spacing: 1px;
+  opacity: 0.65;
+  margin-top: 2px;
+}
+
 .chip {
   font-family: var(--comic);
   font-size: 17px;

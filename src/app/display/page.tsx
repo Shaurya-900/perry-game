@@ -140,6 +140,7 @@ export default function Display() {
         <div className="cta">
           SCAN TO PLAY <span>· TOP 4 WIN AN E-CELL GIFT</span>
           {data?.frozen && <div className="frozen">LEADERBOARD FINAL</div>}
+          <div className="credit">BUILT BY SHAURYA JAIN · E-CELL TECH LEAD</div>
         </div>
         <div className="qr">{qr && <img src={qr} alt="Scan to play" />}</div>
       </div>

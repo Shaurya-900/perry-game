@@ -270,3 +270,12 @@
 .display .now-run b {
   color: #2c6fb5;
 }
+
+.display .credit {
+  font-family: var(--comic);
+  font-size: 2vh;
+  letter-spacing: 1px;
+  color: var(--paper);
+  opacity: 0.55;
+  margin-top: 0.6vh;
+}
