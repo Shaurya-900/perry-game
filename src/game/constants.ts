@@ -84,6 +84,12 @@ export const LASER_W = 64;
 export const LASER_LOW = 34;
 export const LASER_HIGH = 96;
 /**
+ * The laser is DRAWN taller than it kills: an emitter housing sits directly on
+ * top of the beam. Nothing may be placed in that band or it renders inside the
+ * housing, so both the renderer and the fedora placement read it from here.
+ */
+export const LASER_EMITTER_H = 26;
+/**
  * Duck gate — the one obstacle a jump cannot answer.
  *
  * GATE_HIGH clears the measured maximum jump apex (311.2 px, see

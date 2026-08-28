@@ -10,6 +10,9 @@ create table if not exists players (
   client_id   uuid,                      -- the UUID the phone stores locally
   name        text not null,
   email       text not null unique,
+  -- Records "I want to join E-Cell", not mailing consent: the club already
+  -- has every student's email. Kept under the original name so a live table
+  -- does not need migrating mid-fair.
   opted_in    boolean not null default false,
   best_score  integer not null default 0,
   runs        integer not null default 0,

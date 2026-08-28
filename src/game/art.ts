@@ -1,3 +1,4 @@
+import { LASER_EMITTER_H } from "./constants";
 import { BLUE, GOLD, INK, PAPER, PURPLE, RED, TEAL } from "./palette";
 
 /**
@@ -283,13 +284,13 @@ export function drawLaser(
   ctx.save();
   // Emitter housing above the beam.
   ctx.beginPath();
-  ctx.rect(-4, -hi - 26, w + 8, 26);
+  ctx.rect(-4, -hi - LASER_EMITTER_H, w + 8, LASER_EMITTER_H);
   ctx.fillStyle = "#4A4E69";
   ctx.fill();
   ink(ctx, lw);
   ctx.stroke();
   ctx.beginPath();
-  ctx.arc(w / 2, -hi - 13, 6, 0, Math.PI * 2);
+  ctx.arc(w / 2, -hi - LASER_EMITTER_H / 2, 6, 0, Math.PI * 2);
   ctx.fillStyle = color;
   ctx.fill();
   ctx.stroke();

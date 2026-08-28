@@ -7,6 +7,7 @@ import {
   FEDORA_POINTS,
   FIXED_DT,
   GATE_HIGH,
+  LASER_EMITTER_H,
   GATE_LOW,
   GATE_W,
   LASER_W,
@@ -217,9 +218,17 @@ describe("obstacle generator", () => {
       for (const c of coins) {
         checked++;
         for (const o of obstacles) {
-          if (c.x + COIN_R < o.x || c.x - COIN_R > o.x + o.w) continue;
+          const beam = o.kind === "laser" || o.kind === "gate";
+          // A laser is drawn taller and wider than it kills — its emitter
+          // housing sits on top of the beam. A fedora in there is visually
+          // inside the obstacle even though nothing would stop the player
+          // taking it, which is what "caps just above the red laser" was.
+          const left = beam ? o.x - 4 : o.x;
+          const right = beam ? o.x + o.w + 4 : o.x + o.w;
+          if (c.x + COIN_R < left || c.x - COIN_R > right) continue;
           const lo = o.amp === undefined ? o.yLow : o.cy! - o.amp - DRONE_HALF_H;
-          const hi = o.amp === undefined ? o.yHigh : o.cy! + o.amp + DRONE_HALF_H;
+          let hi = o.amp === undefined ? o.yHigh : o.cy! + o.amp + DRONE_HALF_H;
+          if (beam) hi += LASER_EMITTER_H;
           if (c.y + COIN_R > lo && c.y - COIN_R < hi) {
             bad.push(`seed ${seed}: fedora (${c.x.toFixed(0)}, ${c.y.toFixed(0)}) inside ${o.kind} [${lo.toFixed(0)}..${hi.toFixed(0)}]`);
           }

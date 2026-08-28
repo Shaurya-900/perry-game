@@ -1,6 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import type { LeaderboardPayload } from "@/app/api/leaderboard/route";
+import { shareLeaderboard } from "@/lib/client/scorecard";
+import { track } from "@/lib/client/api";
 
 interface Props {
   data: LeaderboardPayload | null;
@@ -18,6 +21,21 @@ interface Props {
 export default function Leaderboard({ data, loading, myId, myName, onClose }: Props) {
   const top = data?.top.slice(0, 10) ?? [];
   const inTop = top.some((r) => r.playerId === myId);
+  const [shareNote, setShareNote] = useState("");
+  const [sharing, setSharing] = useState(false);
+
+  async function share() {
+    if (!data) return;
+    setSharing(true);
+    const result = await shareLeaderboard(data.top, {
+      myRank: data.me?.rank ?? null,
+      totalPlayers: data.totalPlayers,
+    });
+    setSharing(false);
+    track(result === "shared" ? "share_board" : "share_board_fallback");
+    if (result === "copied") setShareNote("COPIED — PASTE IT ANYWHERE.");
+    if (result === "failed") setShareNote("COULDN'T SHARE — TRY AGAIN.");
+  }
 
   return (
     <div className="overlay sheet">
@@ -60,6 +78,12 @@ export default function Leaderboard({ data, loading, myId, myName, onClose }: Pr
       {data && (
         <div className="sub">{data.totalPlayers} AGENTS ON THE BOARD</div>
       )}
+      {shareNote && <div className="sub">{shareNote}</div>}
+      <div className="row">
+        <button className="gold" onClick={share} disabled={!data || sharing}>
+          {sharing ? "SHARING…" : "SHARE THE BOARD"}
+        </button>
+      </div>
       <div className="row">
         <button onClick={onClose}>BACK</button>
       </div>

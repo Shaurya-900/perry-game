@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { bad, json, notConfigured, readJson } from "@/lib/http";
-import { looksLikeSnuId, normaliseEmail, validName } from "@/lib/validate";
+import { looksLikeEmail, normaliseEmail, validName } from "@/lib/validate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   const name = (body.name ?? "").trim();
   const email = normaliseEmail(body.email ?? "");
   if (!validName(name)) return bad("invalid_name");
-  if (!looksLikeSnuId(email)) return bad("invalid_email");
+  if (!looksLikeEmail(email)) return bad("invalid_email");
 
   const db = supabase();
   if (!db) return notConfigured();

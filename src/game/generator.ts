@@ -10,6 +10,7 @@ import {
   GATE_HIGH,
   GATE_LOW,
   GATE_W,
+  LASER_EMITTER_H,
   LASER_HIGH,
   LASER_LOW,
   LASER_W,
@@ -297,10 +298,17 @@ function addDiamond(coins: Coin[], gen: GenState, centreX: number, cy: number) {
  */
 function blocked(obstacles: Obstacle[], c: Coin): boolean {
   for (const o of obstacles) {
-    if (c.x + COIN_R < o.x || c.x - COIN_R > o.x + o.w) continue;
+    // The housing overhangs the beam by 4px on each side, so match its width.
+    const drawnLeft = o.kind === "laser" || o.kind === "gate" ? o.x - 4 : o.x;
+    const drawnRight =
+      o.kind === "laser" || o.kind === "gate" ? o.x + o.w + 4 : o.x + o.w;
+    if (c.x + COIN_R < drawnLeft || c.x - COIN_R > drawnRight) continue;
     // Drones move, so the whole band they sweep counts as solid.
     const lo = o.amp === undefined ? o.yLow : o.cy! - o.amp - DRONE_HALF_H;
-    const hi = o.amp === undefined ? o.yHigh : o.cy! + o.amp + DRONE_HALF_H;
+    let hi = o.amp === undefined ? o.yHigh : o.cy! + o.amp + DRONE_HALF_H;
+    // Blocked means "cannot be reached OR looks wrong", so the drawn extent
+    // counts, not just the part that kills.
+    if (o.kind === "laser" || o.kind === "gate") hi += LASER_EMITTER_H;
     if (c.y + COIN_R > lo && c.y - COIN_R < hi) return true;
   }
   return false;
@@ -371,7 +379,7 @@ export function generate(
         // Risk line: the greedy answer is to jump the beam, the safe one is to
         // slide under and take nothing. Skipping it is always survivable, so
         // the "never forced" invariant holds.
-        addLine(coins, gen, x + last.dx, LASER_HIGH + 24, LASER_W);
+        addLine(coins, gen, x + last.dx, LASER_HIGH + LASER_EMITTER_H + 22, LASER_W);
       } else if (gapW > 150) {
         const centre = spanEnd + gapW / 2;
         const span = Math.min(230, gapW * 0.55);

@@ -49,7 +49,7 @@ function Admin() {
         <>
           <div style={S.grid}>
             <Stat label="Players" value={stats.players} />
-            <Stat label="Opted in" value={stats.optedIn} />
+            <Stat label="Wants to join" value={stats.optedIn} />
             <Stat label="Runs total" value={stats.runsTotal} />
             <Stat label="Runs 24h" value={stats.runsToday} />
             <Stat label="Rejected" value={stats.rejected} />
@@ -97,7 +97,7 @@ function Admin() {
               href={`/api/admin/export?key=${encodeURIComponent(key)}&optedIn=1`}
               style={S.link}
             >
-              Opted-in only CSV
+              Wants-to-join only CSV
             </a>
           </p>
 

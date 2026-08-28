@@ -5,13 +5,15 @@ export function normaliseEmail(raw: string): string {
   return raw.trim().toLowerCase();
 }
 
-export function looksLikeSnuId(raw: string): boolean {
+/**
+ * An address, any domain — visiting students, staff, and typos in the domain
+ * all still get to play. A bare roll number is deliberately NOT accepted: the
+ * club reaches people by email, and a roll number is not reachable.
+ */
+export function looksLikeEmail(raw: string): boolean {
   const v = normaliseEmail(raw);
-  if (v.length < 3 || v.length > 120) return false;
-  // Either an email (any domain — visiting students, staff, typos in the
-  // domain) or a bare roll number.
-  if (/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(v)) return true;
-  return /^[a-z]{0,4}\d{4,12}$/i.test(v);
+  if (v.length < 6 || v.length > 120) return false;
+  return /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(v);
 }
 
 export function isSnuDomain(raw: string): boolean {

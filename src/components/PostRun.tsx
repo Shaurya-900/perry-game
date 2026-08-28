@@ -51,6 +51,7 @@ export default function PostRun({
       fedoras: run.fedoras,
       seconds: run.durationMs / 1000,
       seed: run.seed,
+      isBest,
     });
     setSharing(false);
     track(result === "shared" ? "share" : "share_fallback");

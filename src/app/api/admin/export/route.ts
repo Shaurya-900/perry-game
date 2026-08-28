@@ -11,8 +11,10 @@ function csvCell(v: unknown): string {
 }
 
 /**
- * The lead list. `opted_in` is exported exactly as the player left it — the
- * unchecked box means unchecked, and filtering on it is the whole point.
+ * The lead list. The stored column is still `opted_in`, but the box it now
+ * records is "I want to join E-Cell" — the club already has every student's
+ * email, so interest is the only part worth collecting. Exported under its
+ * real meaning so nobody reads the CSV as a mailing consent.
  */
 export async function GET(req: Request) {
   if (!adminAuthorised(keyFrom(req))) return bad("unauthorised", 401);
@@ -29,7 +31,7 @@ export async function GET(req: Request) {
   const { data, error } = await q;
   if (error) return bad("query_failed", 500);
 
-  const header = "name,email,opted_in,best_score,runs,created_at";
+  const header = "name,email,wants_to_join,best_score,runs,created_at";
   const rows = (data ?? []).map((p) =>
     [p.name, p.email, p.opted_in, p.best_score, p.runs, p.created_at]
       .map(csvCell)
