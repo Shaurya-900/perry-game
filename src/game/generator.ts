@@ -34,7 +34,7 @@ import type { Coin, ObKind, Obstacle, PowerKind } from "./types";
  * playing 10,000 generated patterns with a perfect-input bot.
  */
 
-type Recovery = "jump" | "bigjump" | "react";
+type Recovery = "jump" | "bigjump" | "slide" | "react";
 
 interface PatternItem {
   /** Pixels after the pattern start. Fixed pixels, NOT time: a pattern has to
@@ -53,6 +53,7 @@ interface Pattern {
 
 export const PATTERNS: Pattern[] = [
   { name: "crate", items: [{ dx: 0, kind: "crate" }], recovery: "jump", minLevel: 0 },
+  { name: "laser", items: [{ dx: 0, kind: "laser" }], recovery: "slide", minLevel: 0 },
   { name: "drone", items: [{ dx: 0, kind: "drone" }], recovery: "react", minLevel: 0.05 },
   // The only pattern that cannot be jumped. Held back to ~13 s so a first-timer
   // meets it after they have the hang of jumping, not before.
@@ -128,6 +129,7 @@ export const MAX_PATTERN_SPAN =
 const RECOVERY_TIME: Record<Recovery, number> = {
   jump: 0.3,
   bigjump: 0.55,
+  slide: 0.2,
   react: 0.4,
 };
 
@@ -155,7 +157,7 @@ export function createGen(startX: number): GenState {
   };
 }
 
-/** Difficulty 0..1 from elapsed run time. Gates which patterns can appear. */
+/** Difficulty 0..1 from elapsed run time. */
 export function levelAt(t: number): number {
   return Math.min(1, t / (RAMP_TIME * 0.75));
 }
@@ -340,9 +342,10 @@ export function generate(
       spanEnd = Math.max(spanEnd, ox + o.w);
     }
 
+    const pressure = pressureAt(t);
     const gap =
-      (REACTION + RECOVERY_TIME[p.recovery]) * (1.7 - 0.75 * level) +
-      randRange(rng, 0, 0.45) * (1.1 - level);
+      (REACTION + RECOVERY_TIME[p.recovery]) * (1.7 - 0.75 * pressure) +
+      randRange(rng, 0, 0.45) * (1.1 - pressure);
     const nextStart = spanEnd + gap * speed;
 
     const coinsFrom = coins.length;

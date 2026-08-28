@@ -105,6 +105,7 @@ describe("obstacle generator", () => {
     const width: Record<string, number> = {
       crate: CRATE_W,
       tower: TOWER_W,
+      laser: LASER_W,
       drone: DRONE_W,
       gate: GATE_W,
     };

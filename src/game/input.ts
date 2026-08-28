@@ -38,12 +38,17 @@ export class InputController {
   private held = false;
   private slideHeld = false;
   private pendingJump = false;
+  private pendingSlide = false;
+  private startY = 0;
+  private startX = 0;
+  private swiped = false;
   private activePointer: number | null = null;
   private el: HTMLElement | null = null;
 
   attach(el: HTMLElement): void {
     this.el = el;
     el.addEventListener("pointerdown", this.onDown, { passive: false });
+    el.addEventListener("pointermove", this.onMove, { passive: false });
     el.addEventListener("pointerup", this.onUp);
     el.addEventListener("pointercancel", this.onUp);
     window.addEventListener("keydown", this.onKeyDown);
@@ -55,6 +60,7 @@ export class InputController {
     const el = this.el;
     if (el) {
       el.removeEventListener("pointerdown", this.onDown);
+      el.removeEventListener("pointermove", this.onMove);
       el.removeEventListener("pointerup", this.onUp);
       el.removeEventListener("pointercancel", this.onUp);
     }
@@ -74,6 +80,7 @@ export class InputController {
       slideHeld: this.slideHeld,
     };
     this.pendingJump = false;
+    this.pendingSlide = false;
     return out;
   }
 
@@ -81,6 +88,7 @@ export class InputController {
     this.held = false;
     this.slideHeld = false;
     this.pendingJump = false;
+    this.pendingSlide = false;
     this.activePointer = null;
   }
 

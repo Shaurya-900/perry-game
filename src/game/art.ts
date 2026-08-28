@@ -9,7 +9,7 @@ import { BLUE, GOLD, INK, PAPER, PURPLE, RED, TEAL } from "./palette";
  * paddle tail, fedora. No third-party character art is used anywhere.
  */
 
-export type Pose = "run" | "jump" | "fall" | "hit";
+export type Pose = "run" | "jump" | "fall" | "slide" | "hit";
 
 function ink(ctx: CanvasRenderingContext2D, lw: number) {
   ctx.strokeStyle = INK;
@@ -54,19 +54,25 @@ export function drawAgent(
   // poster-sized score card.
   lw = lw / u;
 
-  const bodyY = -30;
-  const bodyRx = 19;
-  const bodyRy = 17;
+  const sliding = pose === "slide";
+  if (sliding) {
+    ctx.translate(2, 0);
+    ctx.rotate(-0.14);
+  }
+
+  const bodyY = sliding ? -13 : -30;
+  const bodyRx = sliding ? 24 : 19;
+  const bodyRy = sliding ? 12 : 17;
 
   // Tail (paddle), behind the body.
   ctx.save();
-  ctx.translate(-bodyRx + 2, bodyY + 6);
-  ctx.rotate(0.25 + Math.sin(phase) * 0.12);
+  ctx.translate(-bodyRx + 2, bodyY + (sliding ? 2 : 6));
+  ctx.rotate(sliding ? 0.5 : 0.25 + Math.sin(phase) * 0.12);
   blob(ctx, -11, 0, 12, 6, "#0F7A70", lw);
   ctx.restore();
 
   // Legs.
-  {
+  if (!sliding) {
     const swing = pose === "run" ? Math.sin(phase) : pose === "hit" ? 0.6 : -0.5;
     for (const [i, s] of [
       [0, swing],
@@ -88,6 +94,15 @@ export function drawAgent(
       ctx.stroke();
       ctx.restore();
     }
+  } else {
+    ctx.save();
+    ctx.translate(-14, bodyY + 8);
+    ink(ctx, lw);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-10, 6);
+    ctx.stroke();
+    ctx.restore();
   }
 
   // Body.
@@ -102,13 +117,14 @@ export function drawAgent(
   ctx.restore();
 
   // Head.
-  const headX = 8;
-  const headY = bodyY - 17;
+  const headX = sliding ? 16 : 8;
+  const headY = sliding ? bodyY - 6 : bodyY - 17;
   blob(ctx, headX, headY, 13, 12, TEAL, lw);
 
   // Bill.
   ctx.save();
   ctx.translate(headX + 9, headY + 3);
+  ctx.rotate(sliding ? 0.1 : 0);
   blob(ctx, 7, 0, 10, 5, "#E9873A", lw);
   ctx.restore();
 
@@ -134,7 +150,7 @@ export function drawAgent(
   // Fedora.
   ctx.save();
   ctx.translate(headX - 1, headY - 9);
-  ctx.rotate(-0.05);
+  ctx.rotate(sliding ? -0.15 : -0.05);
   ctx.beginPath();
   ctx.ellipse(0, 0, 15, 3.4, 0, 0, Math.PI * 2);
   ctx.fillStyle = "#4A3B2A";

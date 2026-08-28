@@ -18,6 +18,7 @@ import {
   MAX_HOLD,
   METRE,
   PLAYER_H,
+  PLAYER_SLIDE_H,
   PLAYER_W,
   PLAYER_X,
   PLOUGH_POINTS,
@@ -124,12 +125,14 @@ export function createGame(opts: {
  */
 export function stepPlayer(p: PlayerState, dt: number, input: Input): void {
   if (input.jumpPressed) p.jumpBuffer = JUMP_BUFFER;
+  if (input.slidePressed) p.slideBuffer = JUMP_BUFFER;
 
   if (p.jumpBuffer > 0 && (p.onGround || p.coyote > 0)) {
     p.vy = JUMP_V;
     p.onGround = false;
     p.coyote = 0;
     p.jumpBuffer = 0;
+    p.slideT = 0;
     p.holding = true;
     p.holdT = 0;
   } else {
@@ -184,7 +187,7 @@ export function hits(
   const left = PLAYER_X + HITBOX_INSET_X;
   const right = PLAYER_X + PLAYER_W - HITBOX_INSET_X;
   if (sx > right || sx + o.w < left) return false;
-  const top = p.y + PLAYER_H - HITBOX_INSET_TOP;
+  const top = p.y + playerHeight(p) - HITBOX_INSET_TOP;
   const box = obBox(o, t);
   return p.y < box.hi && top > box.lo;
 }
@@ -284,7 +287,7 @@ export function step(s: GameState, input: Input): void {
       cx + COIN_R > PLAYER_X &&
       cx - COIN_R < PLAYER_X + PLAYER_W &&
       c.y + COIN_R > p.y &&
-      c.y - COIN_R < p.y + PLAYER_H
+      c.y - COIN_R < p.y + h
     ) {
       c.taken = true;
       // Magnet and shield deliberately score nothing, which is what keeps
