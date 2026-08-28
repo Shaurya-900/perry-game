@@ -68,16 +68,21 @@ body {
   display: flex;
   justify-content: center;
   background: var(--ink);
-  /* The game never overflows (.stage is height:100% + overflow:hidden), but
-     /admin is a long document inside this same fixed shell — without this it
-     is simply clipped at the viewport with no way to reach the rest. */
+}
+
+/*
+ * Only the data pages scroll. This used to be an unconditional `overflow: auto`
+ * on #app, which also wrapped the game's canvas in a scroll container for no
+ * reason — worth avoiding on a surface that repaints every frame.
+ *
+ * overflow: /admin is a long document inside a fixed shell, so without this it
+ * is clipped at the viewport with no way to reach the rest.
+ * align-items: a stretched child is exactly viewport-tall however long its
+ * content is, so /admin painted its white background for one screen and the
+ * rest scrolled out over the dark shell, dark-on-dark.
+ */
+#app:has(.doc-page) {
   overflow: auto;
-  /*
-   * Without this a stretched child is exactly viewport-tall no matter how long
-   * its content is, so /admin painted its white background for one screen and
-   * everything below scrolled out over the dark shell, dark-on-dark. The game
-   * is unaffected: .stage sets height:100% explicitly.
-   */
   align-items: flex-start;
 }
 

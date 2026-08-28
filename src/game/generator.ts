@@ -376,10 +376,9 @@ export function generate(
         // of only costing the player tempo.
         addLine(coins, gen, x + last.dx - 10, 14, GATE_W + 20);
       } else if (last.kind === "laser") {
-        // Risk line: the greedy answer is to jump the beam, the safe one is to
-        // slide under and take nothing. Skipping it is always survivable, so
-        // the "never forced" invariant holds.
-        addLine(coins, gen, x + last.dx, LASER_HIGH + LASER_EMITTER_H + 22, LASER_W);
+        // Nothing over a laser. Between the beam and the emitter housing on top
+        // of it there is no height that reads cleanly, so the fedoras for this
+        // pattern are simply skipped.
       } else if (gapW > 150) {
         const centre = spanEnd + gapW / 2;
         const span = Math.min(230, gapW * 0.55);

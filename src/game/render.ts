@@ -145,11 +145,16 @@ export interface DrawOpts {
 
 export class Renderer {
   private ctx: CanvasRenderingContext2D;
-  private halftone: CanvasPattern | null = null;
+  /**
+   * Sky gradient + halftone, baked once per resize. Both are static, and a
+   * full-screen pattern fill every frame is the single most expensive thing
+   * the background was doing on a phone.
+   */
+  private backdrop: HTMLCanvasElement | null = null;
+  private dpr = 1;
   private far: HTMLCanvasElement;
   private mid: HTMLCanvasElement;
   private clouds: HTMLCanvasElement;
-  private sky: CanvasGradient | null = null;
   private particles: Particle[] = [];
   private bursts: Burst[] = [];
   private shake = 0;
@@ -163,8 +168,6 @@ export class Renderer {
 
   constructor(private canvas: HTMLCanvasElement) {
     this.ctx = canvas.getContext("2d", { alpha: false })!;
-    const tile = halftoneTile(10, 1.7, "rgba(20,17,16,0.16)");
-    this.halftone = this.ctx.createPattern(tile, "repeat");
     this.far = skylineTile(WORLD_W, 150, "#9DC7DC", 7);
     this.mid = skylineTile(WORLD_W, 110, "#6E9EBB", 19);
     this.clouds = cloudTile(WORLD_W, 120);
@@ -173,6 +176,7 @@ export class Renderer {
 
   resize(): void {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    this.dpr = dpr;
     const rect = this.canvas.getBoundingClientRect();
     this.w = Math.max(1, Math.round(rect.width));
     this.h = Math.max(1, Math.round(rect.height));
@@ -189,7 +193,34 @@ export class Renderer {
       this.worldH - 90,
       Math.max(MIN_HEADROOM, this.worldH * 0.78),
     );
-    this.sky = null;
+    this.buildBackdrop();
+  }
+
+  /** Pre-renders everything in the background that never moves. */
+  private buildBackdrop(): void {
+    const pw = Math.max(1, Math.round(WORLD_W * this.scale * this.dpr));
+    const ph = Math.max(1, Math.round(this.worldH * this.scale * this.dpr));
+    const c = document.createElement("canvas");
+    c.width = pw;
+    c.height = ph;
+    const g = c.getContext("2d");
+    if (!g) return;
+    const k = this.scale * this.dpr;
+    g.setTransform(k, 0, 0, k, 0, 0);
+
+    const grad = g.createLinearGradient(0, 0, 0, this.groundY);
+    grad.addColorStop(0, "#8EC5E0");
+    grad.addColorStop(0.62, SKY);
+    grad.addColorStop(1, "#E8F1F4");
+    g.fillStyle = grad;
+    g.fillRect(0, 0, WORLD_W, this.worldH);
+
+    const pat = g.createPattern(halftoneTile(10, 1.7, "rgba(20,17,16,0.16)"), "repeat");
+    if (pat) {
+      g.fillStyle = pat;
+      g.fillRect(0, 0, WORLD_W, this.groundY);
+    }
+    this.backdrop = c;
   }
 
   addShake(a: number): void {
@@ -319,21 +350,9 @@ export class Renderer {
     const shx = this.shake ? (Math.random() - 0.5) * this.shake : 0;
     const shy = this.shake ? (Math.random() - 0.5) * this.shake : 0;
 
-    // ---- Sky ----
-    if (!this.sky) {
-      const g = ctx.createLinearGradient(0, 0, 0, this.groundY);
-      g.addColorStop(0, "#8EC5E0");
-      g.addColorStop(0.62, SKY);
-      g.addColorStop(1, "#E8F1F4");
-      this.sky = g;
-    }
-    ctx.fillStyle = this.sky;
-    ctx.fillRect(0, 0, WORLD_W, this.worldH);
-    if (this.halftone) {
-      ctx.save();
-      ctx.fillStyle = this.halftone;
-      ctx.fillRect(0, 0, WORLD_W, this.groundY);
-      ctx.restore();
+    // ---- Sky ---- one blit instead of a gradient fill plus a pattern fill.
+    if (this.backdrop) {
+      ctx.drawImage(this.backdrop, 0, 0, WORLD_W, this.worldH);
     }
 
     ctx.save();
@@ -651,6 +670,20 @@ export class Renderer {
     ctx.strokeText("SCORE", WORLD_W - 22, 68);
     ctx.fillStyle = GOLD;
     ctx.fillText("SCORE", WORLD_W - 22, 68);
+
+    // Fedora tally, under the score: a hat and a count, so what the fedoras are
+    // worth is visible while running rather than only on the score card.
+    ctx.save();
+    ctx.translate(WORLD_W - 34, 108);
+    drawFedora(ctx, 12, false, s.t, 2.5);
+    ctx.restore();
+    ctx.textAlign = "right";
+    ctx.font = `30px ${COMIC_FONT}`;
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = INK;
+    ctx.fillStyle = PAPER;
+    ctx.strokeText(String(s.fedoras), WORLD_W - 54, 94);
+    ctx.fillText(String(s.fedoras), WORLD_W - 54, 94);
 
     if (s.invT > 0) {
       ctx.textAlign = "left";
