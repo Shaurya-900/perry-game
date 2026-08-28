@@ -13,6 +13,8 @@ const ALLOWED = new Set([
   "run_end",
   "share",
   "share_fallback",
+  "challenge_open",
+  "challenge_accepted",
   "leaderboard_view",
 ]);
 

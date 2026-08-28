@@ -4,6 +4,7 @@ import {
   GROUND_Y,
   MAX_MULT,
   PLAYER_H,
+  PLAYER_SLIDE_H,
   PLAYER_W,
   PLAYER_X,
   WORLD_H,
@@ -15,12 +16,16 @@ import {
   drawCrate,
   drawDrone,
   drawFedora,
+  drawGate,
+  drawLaser,
+  drawMagnet,
+  drawShield,
   drawTower,
 } from "./art";
 import type { GameState } from "./engine";
-import { score } from "./engine";
+import { playerHeight, score } from "./engine";
 import { obBox } from "./generator";
-import { COMIC_FONT, GOLD, INK, PAPER, PAPER_DARK, RED, SKY } from "./palette";
+import { BLUE, COMIC_FONT, GOLD, INK, PAPER, PAPER_DARK, RED, SKY } from "./palette";
 import type { Fx } from "./types";
 
 interface Particle {
@@ -242,6 +247,32 @@ export class Renderer {
         case "land":
           this.spawnParticles(PLAYER_X + 6, this.groundY, 4, PAPER_DARK, 90);
           break;
+        case "slide":
+          // Sliding was the one action with no feedback at all.
+          this.spawnParticles(PLAYER_X - 2, this.groundY, 10, PAPER_DARK, 130);
+          break;
+        case "magnet":
+          this.spawnParticles(f.x, sy, 16, RED, 200);
+          this.bursts.push({ x: f.x, y: sy - 34, life: 0, text: "MAGNET!", color: RED });
+          break;
+        case "shield":
+          this.spawnParticles(f.x, sy, 16, BLUE, 200);
+          this.bursts.push({ x: f.x, y: sy - 34, life: 0, text: "SHIELD!", color: BLUE });
+          break;
+        case "shield_break":
+          this.spawnParticles(PLAYER_X + PLAYER_W / 2, sy - 20, 24, BLUE, 260);
+          this.bursts.push({
+            x: PLAYER_X + 60,
+            y: sy - 40,
+            life: 0,
+            text: "BLOCKED!",
+            color: BLUE,
+          });
+          this.addShake(11);
+          break;
+        case "nearmiss":
+          this.spawnParticles(PLAYER_X + PLAYER_W, sy - 10, 3, PAPER_DARK, 110);
+          break;
         case "best":
           this.bursts.push({
             x: PLAYER_X + 60,
@@ -405,12 +436,47 @@ export class Renderer {
       ctx.translate(x, this.groundY);
       if (o.kind === "crate") drawCrate(ctx, o.w, o.yHigh, o.variant);
       else if (o.kind === "tower") drawTower(ctx, o.w, o.yHigh, o.variant);
+      else if (o.kind === "laser") drawLaser(ctx, o.w, o.yLow, o.yHigh, s.t);
+      else if (o.kind === "gate") drawGate(ctx, o.w, o.yLow, o.yHigh, s.t);
       else {
         const box = obBox(o, s.t);
         ctx.translate(0, -(box.lo + DRONE_HALF_H));
         drawDrone(ctx, o.w, DRONE_HALF_H, s.t);
       }
       ctx.restore();
+    }
+
+    // First-run coaching. The gate is the one obstacle a jump cannot answer,
+    // so it gets labelled at the moment the player can first see it coming —
+    // which teaches the mechanic far better than a line of text at the top.
+    if (opts.showTapHint) {
+      for (const o of s.obstacles) {
+        if (o.kind !== "gate") continue;
+        const gx = o.x - camX;
+        if (gx < -o.w || gx > WORLD_W) continue;
+        const cx = gx + o.w / 2;
+        const cy = this.groundY - 210;
+        ctx.save();
+        ctx.textAlign = "center";
+        ctx.font = `32px ${COMIC_FONT}`;
+        ctx.lineWidth = 7;
+        ctx.strokeStyle = INK;
+        ctx.fillStyle = PAPER;
+        ctx.strokeText("DUCK!", cx, cy);
+        ctx.fillText("DUCK!", cx, cy);
+        ctx.beginPath();
+        ctx.moveTo(cx - 13, cy + 16);
+        ctx.lineTo(cx, cy + 30);
+        ctx.lineTo(cx + 13, cy + 16);
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = 8;
+        ctx.stroke();
+        ctx.strokeStyle = PAPER;
+        ctx.lineWidth = 3.5;
+        ctx.stroke();
+        ctx.restore();
+        break;
+      }
     }
 
     // ---- Fedoras ----
@@ -420,33 +486,86 @@ export class Renderer {
       if (x > WORLD_W + 40 || x < -40) continue;
       ctx.save();
       ctx.translate(x, this.groundY - c.y);
-      drawFedora(ctx, c.golden ? 13 : 11, c.golden, s.t);
+      if (c.power === "magnet") drawMagnet(ctx, 13, s.t);
+      else if (c.power === "shield") drawShield(ctx, 13, s.t);
+      else drawFedora(ctx, c.power ? 13 : 11, c.power === "golden", s.t);
+      ctx.restore();
+    }
+
+    // ---- Speed lines ----
+    // Drawn directly rather than as particles, to stay clear of the 90-particle
+    // cap the frame budget depends on.
+    const speedMult = s.speed / BASE_SPEED;
+    if (speedMult > 1.7 && !s.dead) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(0.3, (speedMult - 1.7) * 0.55);
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 7; i++) {
+        const y = ((i * 97 + ((s.t * 260) % 97)) % this.worldH) * 0.82;
+        const len = 40 + ((i * 37) % 60);
+        const x = WORLD_W - ((s.t * 900 + i * 130) % (WORLD_W + 120));
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + len, y);
+        ctx.stroke();
+      }
       ctx.restore();
     }
 
     // ---- Player ----
     const p = s.player;
+    const ph = playerHeight(p);
     const pose = s.dead
       ? "hit"
-      : !p.onGround
-        ? p.vy > 0
-          ? "jump"
-          : "fall"
-        : "run";
+      : ph === PLAYER_SLIDE_H
+        ? "slide"
+        : !p.onGround
+          ? p.vy > 0
+            ? "jump"
+            : "fall"
+          : "run";
     ctx.save();
     ctx.translate(PLAYER_X + PLAYER_W / 2, this.groundY - p.y);
     if (s.invT > 0) {
       // Golden-fedora aura.
       ctx.save();
-      ctx.globalAlpha = 0.35 + 0.25 * Math.sin(s.t * 18);
+      // Flashing out over its last second, so it never seems to stop for no
+      // reason.
+      ctx.globalAlpha =
+        s.invT < 1 && Math.sin(s.t * 30) < 0 ? 0.12 : 0.35 + 0.25 * Math.sin(s.t * 18);
       ctx.beginPath();
       ctx.ellipse(0, -PLAYER_H * 0.55, 40, 44, 0, 0, Math.PI * 2);
       ctx.fillStyle = GOLD;
       ctx.fill();
       ctx.restore();
     }
+    if (s.magnetT > 0) {
+      // Pulsing ring, flashing out over the last second.
+      ctx.save();
+      ctx.globalAlpha = s.magnetT < 1 && Math.sin(s.t * 30) < 0 ? 0.15 : 0.55;
+      ctx.beginPath();
+      ctx.arc(0, -PLAYER_H * 0.55, 34 + 5 * Math.sin(s.t * 9), 0, Math.PI * 2);
+      ctx.strokeStyle = RED;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.restore();
+    }
+    if (s.shield) {
+      ctx.save();
+      ctx.globalAlpha = 0.5;
+      ctx.beginPath();
+      ctx.ellipse(0, -PLAYER_H * 0.5, 36, 42, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = BLUE;
+      ctx.lineWidth = 3.5;
+      ctx.stroke();
+      ctx.globalAlpha = 0.14;
+      ctx.fillStyle = BLUE;
+      ctx.fill();
+      ctx.restore();
+    }
     if (s.dead) ctx.rotate(0.35);
-    drawAgent(ctx, pose, PLAYER_H, this.runPhase);
+    drawAgent(ctx, pose, pose === "slide" ? PLAYER_SLIDE_H * 2 : PLAYER_H, this.runPhase);
     ctx.restore();
 
     // ---- Particles ----
@@ -542,6 +661,16 @@ export class Renderer {
       ctx.fillStyle = GOLD;
       ctx.fillText(`INVINCIBLE ${s.invT.toFixed(1)}`, 22, 24);
     }
+    if (s.magnetT > 0) {
+      ctx.textAlign = "left";
+      ctx.font = `26px ${COMIC_FONT}`;
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = INK;
+      const y = s.invT > 0 ? 52 : 24;
+      ctx.strokeText(`MAGNET ${s.magnetT.toFixed(1)}`, 22, y);
+      ctx.fillStyle = RED;
+      ctx.fillText(`MAGNET ${s.magnetT.toFixed(1)}`, 22, y);
+    }
     ctx.restore();
   }
 
@@ -555,6 +684,8 @@ export class Renderer {
     const y = this.groundY - 240;
     ctx.strokeText("TAP TO JUMP · HOLD FOR HIGHER", WORLD_W / 2, y);
     ctx.fillText("TAP TO JUMP · HOLD FOR HIGHER", WORLD_W / 2, y);
+    ctx.strokeText("HOLD LOW TO DUCK · STAY DOWN", WORLD_W / 2, y + 30);
+    ctx.fillText("HOLD LOW TO DUCK · STAY DOWN", WORLD_W / 2, y + 30);
     ctx.restore();
   }
 }

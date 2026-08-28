@@ -70,9 +70,15 @@ camera position is a closed-form integral of the speed curve, so a run is
 identical on a 60 Hz phone and a 120 Hz one, and any run can be replayed from
 its seed. The seed comes from the server at `POST /api/run/start`.
 
-**The controls.** One button: tap anywhere to jump, hold for a higher one.
-There is nothing else to learn — every obstacle in the game is answered by a
-jump of the right height at the right moment.
+**The controls.** Tap anywhere to jump, hold for a higher one. Hold the lower
+third of the screen (or swipe down) to duck, and you stay down for as long as
+you hold. Ducking in mid-air cancels the jump and drops you fast, so a jump
+taken by mistake is still recoverable.
+
+Ducking is not decorative: the `gate` obstacle tops out above the measured
+311px jump apex, so no jump can clear it, and its underside sits between the
+sliding and standing hitbox tops. `generator.test.ts` pins both halves — that a
+jump cannot pass it, and that a slide can.
 
 **The difficulty curve.** Speed ramps linearly from 200 world px/s to 2.2× that
 over 90 seconds. The base speed is picked so that even at the 2.2× ceiling an
@@ -84,7 +90,7 @@ getting harder instead of plateauing.
 **Obstacle generation.** The generator never places obstacles by pixel gap. It
 places them by *time* gap at the speed the player will actually be travelling
 when they arrive: reaction time plus the recovery time for the previous answer
-(a held jump costs more than a small one). Multi-obstacle patterns are spaced in
+(a held jump costs more than a slide). Multi-obstacle patterns are spaced in
 fixed pixels and capped at `MAX_PATTERN_SPAN`, so the whole shape is on screen
 before the player has to commit to a jump.
 

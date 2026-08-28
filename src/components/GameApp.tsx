@@ -6,7 +6,6 @@ import Onboarding from "./Onboarding";
 import PostRun from "./PostRun";
 import Leaderboard from "./Leaderboard";
 import {
-  cooldownLeft,
   loadPlayer,
   makePlayer,
   savePlayer,
@@ -16,6 +15,7 @@ import {
   fetchLeaderboard,
   flushQueue,
   registerPlayer,
+  sendLive,
   startRun,
   submitRun,
   track,
@@ -23,6 +23,7 @@ import {
 } from "@/lib/client/api";
 import type { LeaderboardPayload } from "@/app/api/leaderboard/route";
 import { loadMuted, setMuted as setAudioMuted, sfx } from "@/game/audio";
+import { parseChallenge, type Challenge } from "@/lib/qr";
 
 type Phase = "boot" | "onboarding" | "ready" | "playing" | "over";
 
@@ -41,12 +42,14 @@ export default function GameApp() {
   const [boardOpen, setBoardOpen] = useState(false);
   const [boardLoading, setBoardLoading] = useState(false);
   const [muted, setMuted] = useState(true);
-  const [, forceTick] = useState(0);
+  const [challenge, setChallenge] = useState<Challenge | null>(null);
 
   const gameRef = useRef<GameHandle>(null);
   const tokenRef = useRef<{ token: string; seed: number; at: number } | null>(null);
   const playerRef = useRef<LocalPlayer | null>(null);
   playerRef.current = player;
+  const challengeRef = useRef<Challenge | null>(null);
+  challengeRef.current = challenge;
 
   const persist = useCallback((p: LocalPlayer) => {
     playerRef.current = p;
@@ -60,7 +63,7 @@ export default function GameApp() {
     if (!p?.playerId) return;
     const cur = tokenRef.current;
     if (cur && Date.now() - cur.at < TOKEN_MAX_AGE) return;
-    const res = await startRun(p.playerId);
+    const res = await startRun(p.playerId, challengeRef.current?.seed);
     if (res?.token) tokenRef.current = { ...res, at: Date.now() };
   }, []);
 
@@ -83,6 +86,12 @@ export default function GameApp() {
   useEffect(() => {
     setMuted(loadMuted());
     track("qr_open");
+    const invite = parseChallenge(window.location.search);
+    if (invite) {
+      setChallenge(invite);
+      challengeRef.current = invite;
+      track("challenge_open");
+    }
     void flushQueue();
     const p = loadPlayer();
     if (p) {
@@ -95,13 +104,6 @@ export default function GameApp() {
       track("onboard_start");
     }
   }, [register]);
-
-  // Cooldown countdown only needs to tick while it is on screen.
-  useEffect(() => {
-    if (phase !== "over") return;
-    const id = setInterval(() => forceTick((n) => n + 1), 250);
-    return () => clearInterval(id);
-  }, [phase]);
 
   const refreshBoard = useCallback(async () => {
     setBoardLoading(true);
@@ -120,7 +122,7 @@ export default function GameApp() {
 
   function play() {
     const p = playerRef.current;
-    if (!p || cooldownLeft(p) > 0) return;
+    if (!p) return;
     sfx.tap();
     setSubmitted(null);
     setIsBest(false);
@@ -129,6 +131,7 @@ export default function GameApp() {
     gameRef.current?.start(tokenRef.current?.seed);
     setPhase("playing");
     track(p.runsToday === 0 ? "first_run" : "run_start");
+    if (challengeRef.current) track("challenge_accepted");
   }
 
   const onGameOver = useCallback(
@@ -145,8 +148,15 @@ export default function GameApp() {
         ...p,
         best: Math.max(p.best, r.score),
         runsToday: p.runsToday + 1,
-        lastRunEndedAt: Date.now(),
       });
+
+      // Beating the challenge retires it, so the next token comes back with a
+      // fresh random course instead of replaying the same one forever.
+      const ch = challengeRef.current;
+      if (ch && r.score > ch.score) {
+        challengeRef.current = null;
+        setChallenge(null);
+      }
 
       const tok = tokenRef.current;
       tokenRef.current = null;
@@ -180,6 +190,18 @@ export default function GameApp() {
     if (phase === "ready" || phase === "over") void primeToken();
   }, [phase, primeToken]);
 
+  // Feed the booth display while a run is in progress. No "run ended" call:
+  // letting the row go stale handles a closed tab identically, for free.
+  useEffect(() => {
+    if (phase !== "playing") return;
+    const token = tokenRef.current?.token;
+    if (!token) return;
+    const id = setInterval(() => {
+      sendLive(token, gameRef.current?.liveScore() ?? 0);
+    }, 2500);
+    return () => clearInterval(id);
+  }, [phase]);
+
   function toggleMute() {
     const next = !muted;
     setMuted(next);
@@ -195,7 +217,6 @@ export default function GameApp() {
 
   const canvasMode: CanvasMode =
     phase === "playing" ? "playing" : phase === "over" ? "dead" : "attract";
-  const cd = cooldownLeft(player);
 
   return (
     <div className="stage">
@@ -220,11 +241,39 @@ export default function GameApp() {
         <div className="overlay">
           <h1>AGENT RUN</h1>
           <div className="sub">
-            {player.best > 0 ? `YOUR BEST: ${player.best}` : "TAP TO DODGE THE -INATORS"}
+            {player.best > 0 ? `YOUR BEST: ${player.best}` : "DODGE THE -INATORS"}
           </div>
+          {challenge && (
+            <div className="challenge">
+              {challenge.name.toUpperCase()} CHALLENGED YOU
+              <b>BEAT {challenge.score}</b>
+              <span>same course, same obstacles</span>
+            </div>
+          )}
+          {player.runsToday === 0 && (
+            <div className="howto">
+              <b>HOW TO PLAY</b>
+              <div className="line">
+                <span className="key">TAP</span>
+                <span>JUMP · HOLD = HIGHER</span>
+              </div>
+              <div className="line duck">
+                <span className="key">HOLD LOW</span>
+                <span>DUCK · STAY DOWN</span>
+              </div>
+              <div className="line duck">
+                <span className="key">PURPLE</span>
+                <span>NO JUMP — DUCK IT</span>
+              </div>
+              <div className="line">
+                <span className="key">FEDORAS</span>
+                <span>POINTS · SHIELD = 1 HIT</span>
+              </div>
+            </div>
+          )}
           <div className="row">
-            <button className="primary" onClick={play} disabled={cd > 0}>
-              {cd > 0 ? `WAIT ${Math.ceil(cd / 1000)}s` : "PLAY"}
+            <button className="primary" onClick={play}>
+              PLAY
             </button>
           </div>
           <div className="row">
@@ -245,7 +294,6 @@ export default function GameApp() {
           submitted={submitted}
           pending={pending}
           queued={queued}
-          cooldownMs={cd}
           runsToday={player.runsToday}
           name={player.name}
           onPlayAgain={play}

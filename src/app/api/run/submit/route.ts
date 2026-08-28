@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { isFrozen, supabase } from "@/lib/supabase";
 import { bad, json, notConfigured, readJson } from "@/lib/http";
 import { verifyRunToken } from "@/lib/token";
 import {
@@ -23,13 +23,14 @@ async function reject(
   playerId: string | null,
   reason: string,
   detail: unknown,
+  status = 422,
 ) {
   await db.from("rejected_submissions").insert({
     player_id: playerId,
     reason,
     detail: detail as Record<string, unknown>,
   });
-  return bad(reason, 422);
+  return bad(reason, status);
 }
 
 export async function POST(req: Request) {
@@ -38,6 +39,10 @@ export async function POST(req: Request) {
 
   const db = supabase();
   if (!db) return notConfigured();
+
+  // Checked before anything is written: once the fair is over the board says
+  // FINAL, so nothing may still be landing behind it.
+  if (await isFrozen(db)) return bad("leaderboard_frozen", 409);
 
   const verified = verifyRunToken(body.token);
   if (!verified.ok) return reject(db, null, `token_${verified.reason}`, body);
@@ -58,7 +63,7 @@ export async function POST(req: Request) {
     .eq("player_id", playerId)
     .gte("created_at", since);
   if ((count ?? 0) >= MAX_SUBMISSIONS_PER_WINDOW) {
-    return reject(db, playerId, "rate_limited", { count });
+    return reject(db, playerId, "rate_limited", { count }, 429);
   }
 
   // The run id is the primary key, so a replayed token collides here.

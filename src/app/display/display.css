@@ -180,3 +180,33 @@
   align-self: center;
   text-align: center;
 }
+
+/* Who is running right now. Hidden entirely when nobody is, so the wall never
+   shows an empty band. */
+.display .now {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 10px 18px;
+  margin-top: 10px;
+  border: 4px solid var(--ink, #141110);
+  background: #fffaf0;
+  font-family: var(--comic, "Bangers", Impact, sans-serif);
+  font-size: 30px;
+  letter-spacing: 1px;
+  overflow: hidden;
+}
+
+.display .now-label {
+  color: #e23b34;
+  flex: none;
+}
+
+.display .now-run {
+  white-space: nowrap;
+}
+
+.display .now-run b {
+  color: #2c6fb5;
+}

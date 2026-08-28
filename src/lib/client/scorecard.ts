@@ -2,7 +2,7 @@
 
 import { drawAgent, drawBurst, drawFedora } from "@/game/art";
 import { COMIC_FONT, GOLD, INK, PAPER, PAPER_DARK, RED, SKY } from "@/game/palette";
-import { drawQr, gameUrl } from "@/lib/qr";
+import { challengeUrl, drawQr } from "@/lib/qr";
 import { firstName } from "./player";
 
 export interface CardData {
@@ -12,6 +12,8 @@ export interface CardData {
   totalPlayers: number | null;
   fedoras: number;
   seconds: number;
+  /** The course this run was played on, so the card's QR is a challenge. */
+  seed: number;
 }
 
 /** A different jab for every score band — the caption is what gets screenshotted. */
@@ -223,7 +225,10 @@ export function renderScoreCard(data: CardData): HTMLCanvasElement {
   ctx.strokeStyle = INK;
   ctx.lineWidth = 8;
   ctx.strokeRect(qx - 12, qy - 12, qrSize + 24, qrSize + 24);
-  drawQr(ctx, gameUrl(), qx, qy, qrSize);
+  // The QR on the card IS the challenge link, so the existing share button
+  // invites a friend onto this exact course — and it survives the download
+  // fallback, where a plain URL would be lost.
+  drawQr(ctx, challengeUrl(data.seed, data.score, data.name), qx, qy, qrSize);
 
   return c;
 }
@@ -247,6 +252,7 @@ export async function shareScoreCard(
         files: [file],
         title: "E-Cell Club Fair",
         text: `I scored ${data.score} dodging -inators at the E-Cell stall. Beat it.`,
+        url: challengeUrl(data.seed, data.score, data.name),
       });
       return "shared";
     } catch (err) {

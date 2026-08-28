@@ -41,6 +41,19 @@ create table if not exists rejected_submissions (
   created_at timestamptz not null default now()
 );
 
+-- Who is running RIGHT NOW, for the booth display.
+--
+-- One upserted row per player, so the table is bounded by player count and
+-- never needs a sweep: the read filters on updated_at, which makes a stale row
+-- inert rather than wrong. Deliberately separate from `players` so a write
+-- every couple of seconds never contends with the leaderboard read path.
+create table if not exists live_runs (
+  player_id  uuid primary key references players(id) on delete cascade,
+  score      integer not null default 0,
+  updated_at timestamptz not null default now()
+);
+create index if not exists live_runs_updated_idx on live_runs (updated_at desc);
+
 -- Funnel counters: qr_open -> onboard_complete -> first_run -> share.
 create table if not exists events (
   id         bigserial primary key,
@@ -83,3 +96,4 @@ alter table runs enable row level security;
 alter table rejected_submissions enable row level security;
 alter table events enable row level security;
 alter table settings enable row level security;
+alter table live_runs enable row level security;

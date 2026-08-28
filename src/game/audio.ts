@@ -92,6 +92,7 @@ function noise(dur: number, gain = 0.6) {
 
 export const sfx = {
   jump: () => tone(300, 0.12, "square", 0.5, 620),
+  slide: () => noise(0.16, 0.35),
   collect: () => {
     tone(880, 0.07, "square", 0.4);
     setTimeout(() => tone(1320, 0.08, "square", 0.35), 55);
@@ -102,6 +103,19 @@ export const sfx = {
     );
   },
   plough: () => tone(160, 0.1, "sawtooth", 0.5, 60),
+  magnet: () => {
+    [520, 700, 900].forEach((f, i) =>
+      setTimeout(() => tone(f, 0.1, "sawtooth", 0.35), i * 55),
+    );
+  },
+  shield: () => {
+    tone(420, 0.14, "triangle", 0.45, 760);
+    setTimeout(() => tone(760, 0.16, "triangle", 0.35), 90);
+  },
+  shieldBreak: () => {
+    tone(300, 0.18, "square", 0.5, 120);
+    noise(0.18, 0.4);
+  },
   best: () => {
     [880, 1174].forEach((f, i) => setTimeout(() => tone(f, 0.16, "triangle", 0.4), i * 90));
   },

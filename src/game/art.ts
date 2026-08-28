@@ -1,4 +1,4 @@
-import { GOLD, INK, PAPER, RED, TEAL } from "./palette";
+import { BLUE, GOLD, INK, PAPER, PURPLE, RED, TEAL } from "./palette";
 
 /**
  * Every sprite in the game is drawn with paths — no image assets at all.
@@ -9,7 +9,7 @@ import { GOLD, INK, PAPER, RED, TEAL } from "./palette";
  * paddle tail, fedora. No third-party character art is used anywhere.
  */
 
-export type Pose = "run" | "jump" | "fall" | "hit";
+export type Pose = "run" | "jump" | "fall" | "slide" | "hit";
 
 function ink(ctx: CanvasRenderingContext2D, lw: number) {
   ctx.strokeStyle = INK;
@@ -54,19 +54,25 @@ export function drawAgent(
   // poster-sized score card.
   lw = lw / u;
 
-  const bodyY = -30;
-  const bodyRx = 19;
-  const bodyRy = 17;
+  const sliding = pose === "slide";
+  if (sliding) {
+    ctx.translate(2, 0);
+    ctx.rotate(-0.14);
+  }
+
+  const bodyY = sliding ? -13 : -30;
+  const bodyRx = sliding ? 24 : 19;
+  const bodyRy = sliding ? 12 : 17;
 
   // Tail (paddle), behind the body.
   ctx.save();
-  ctx.translate(-bodyRx + 2, bodyY + 6);
-  ctx.rotate(0.25 + Math.sin(phase) * 0.12);
+  ctx.translate(-bodyRx + 2, bodyY + (sliding ? 2 : 6));
+  ctx.rotate(sliding ? 0.5 : 0.25 + Math.sin(phase) * 0.12);
   blob(ctx, -11, 0, 12, 6, "#0F7A70", lw);
   ctx.restore();
 
   // Legs.
-  {
+  if (!sliding) {
     const swing = pose === "run" ? Math.sin(phase) : pose === "hit" ? 0.6 : -0.5;
     for (const [i, s] of [
       [0, swing],
@@ -88,6 +94,15 @@ export function drawAgent(
       ctx.stroke();
       ctx.restore();
     }
+  } else {
+    ctx.save();
+    ctx.translate(-14, bodyY + 8);
+    ink(ctx, lw);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-10, 6);
+    ctx.stroke();
+    ctx.restore();
   }
 
   // Body.
@@ -102,13 +117,14 @@ export function drawAgent(
   ctx.restore();
 
   // Head.
-  const headX = 8;
-  const headY = bodyY - 17;
+  const headX = sliding ? 16 : 8;
+  const headY = sliding ? bodyY - 6 : bodyY - 17;
   blob(ctx, headX, headY, 13, 12, TEAL, lw);
 
   // Bill.
   ctx.save();
   ctx.translate(headX + 9, headY + 3);
+  ctx.rotate(sliding ? 0.1 : 0);
   blob(ctx, 7, 0, 10, 5, "#E9873A", lw);
   ctx.restore();
 
@@ -134,7 +150,7 @@ export function drawAgent(
   // Fedora.
   ctx.save();
   ctx.translate(headX - 1, headY - 9);
-  ctx.rotate(-0.05);
+  ctx.rotate(sliding ? -0.15 : -0.05);
   ctx.beginPath();
   ctx.ellipse(0, 0, 15, 3.4, 0, 0, Math.PI * 2);
   ctx.fillStyle = "#4A3B2A";
@@ -253,6 +269,82 @@ export function drawTower(
   ctx.restore();
 }
 
+/** Overhead beam emitter — the slide obstacle. */
+export function drawLaser(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  lo: number,
+  hi: number,
+  t: number,
+  lw = 3,
+  color = RED,
+) {
+  const h = hi - lo;
+  ctx.save();
+  // Emitter housing above the beam.
+  ctx.beginPath();
+  ctx.rect(-4, -hi - 26, w + 8, 26);
+  ctx.fillStyle = "#4A4E69";
+  ctx.fill();
+  ink(ctx, lw);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(w / 2, -hi - 13, 6, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.stroke();
+
+  // Beam.
+  const pulse = 0.72 + 0.28 * Math.sin(t * 14);
+  ctx.globalAlpha = pulse;
+  ctx.beginPath();
+  ctx.rect(0, -hi, w, h);
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.beginPath();
+  ctx.rect(0, -hi, w, h);
+  ink(ctx, lw);
+  ctx.stroke();
+  // Zap lines inside the beam.
+  ctx.beginPath();
+  for (let i = 0; i < 3; i++) {
+    const y = -hi + ((i + 0.5) * h) / 3;
+    ctx.moveTo(0, y);
+    ctx.lineTo(w * 0.35, y + 4 * Math.sin(t * 20 + i));
+    ctx.lineTo(w * 0.7, y - 4 * Math.sin(t * 20 + i));
+    ctx.lineTo(w, y);
+  }
+  ctx.strokeStyle = "#FFE9A8";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+}
+
+/**
+ * Duck gate. The beam is a laser in another colour; the strip on the ground
+ * underneath is what tells a first-timer the gap is a way through.
+ */
+export function drawGate(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  lo: number,
+  hi: number,
+  t: number,
+  lw = 3,
+) {
+  drawLaser(ctx, w, lo, hi, t, lw, PURPLE);
+  ctx.save();
+  ctx.globalAlpha = 0.35 + 0.25 * Math.sin(t * 8);
+  ctx.fillStyle = PURPLE;
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath();
+    ctx.rect(i * (w / 4) + 2, -4, w / 4 - 4, 5);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 /** Hovering drone with a spinning rotor. */
 export function drawDrone(
   ctx: CanvasRenderingContext2D,
@@ -330,6 +422,66 @@ export function drawFedora(
       ctx.lineTo(Math.cos(a) * r * 1.9, Math.sin(a) * r * 1.9);
       ctx.stroke();
     }
+  }
+  ctx.restore();
+}
+
+/** Shield pickup: a kite shield, readable at 26px on a phone. */
+export function drawShield(
+  ctx: CanvasRenderingContext2D,
+  r: number,
+  t: number,
+  lw = 2.5,
+) {
+  ctx.save();
+  ctx.scale(1 + 0.06 * Math.sin(t * 4), 1 + 0.06 * Math.sin(t * 4));
+  ctx.beginPath();
+  ctx.moveTo(0, -r);
+  ctx.lineTo(r * 0.85, -r * 0.5);
+  ctx.quadraticCurveTo(r * 0.85, r * 0.5, 0, r);
+  ctx.quadraticCurveTo(-r * 0.85, r * 0.5, -r * 0.85, -r * 0.5);
+  ctx.closePath();
+  ctx.fillStyle = BLUE;
+  ctx.fill();
+  ink(ctx, lw);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-r * 0.3, -r * 0.35);
+  ctx.lineTo(-r * 0.3, r * 0.25);
+  ctx.strokeStyle = "#BFE0F0";
+  ctx.lineWidth = lw;
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** Magnet pickup: a horseshoe magnet with grey poles. */
+export function drawMagnet(
+  ctx: CanvasRenderingContext2D,
+  r: number,
+  t: number,
+  lw = 2.5,
+) {
+  ctx.save();
+  ctx.rotate(Math.sin(t * 4) * 0.2);
+  ctx.lineCap = "butt";
+  ctx.beginPath();
+  ctx.arc(0, r * 0.15, r * 0.62, Math.PI, 0);
+  ctx.lineTo(r * 0.62, r * 0.7);
+  ctx.lineTo(r * 0.24, r * 0.7);
+  ctx.lineTo(r * 0.24, r * 0.15);
+  ctx.arc(0, r * 0.15, r * 0.24, 0, Math.PI, true);
+  ctx.lineTo(-r * 0.62, r * 0.7);
+  ctx.closePath();
+  ctx.fillStyle = RED;
+  ctx.fill();
+  ink(ctx, lw);
+  ctx.stroke();
+  ctx.fillStyle = "#D8D2C4";
+  for (const sx of [-1, 1]) {
+    ctx.beginPath();
+    ctx.rect(sx * r * 0.62 - (sx > 0 ? r * 0.38 : 0), r * 0.42, r * 0.38, r * 0.28);
+    ctx.fill();
+    ctx.stroke();
   }
   ctx.restore();
 }

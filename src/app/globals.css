@@ -67,8 +67,10 @@ canvas.game {
   align-items: center;
   justify-content: center;
   gap: 14px;
-  padding: 22px;
+  padding: calc(22px + env(safe-area-inset-top)) 22px
+    calc(22px + env(safe-area-inset-bottom));
   text-align: center;
+  overflow-y: auto;
 }
 
 .overlay.sheet {
@@ -212,6 +214,69 @@ input:focus {
   max-width: 380px;
 }
 
+.challenge {
+  width: 100%;
+  max-width: 380px;
+  border: 4px solid var(--ink);
+  background: var(--gold);
+  box-shadow: 5px 5px 0 var(--ink);
+  padding: 10px 14px;
+  font-family: var(--comic);
+  font-size: 19px;
+  letter-spacing: 0.6px;
+  text-align: center;
+}
+
+.challenge b {
+  display: block;
+  font-size: 30px;
+  line-height: 1.1;
+}
+
+.challenge span {
+  font-size: 15px;
+  opacity: 0.75;
+}
+
+.howto {
+  width: 100%;
+  max-width: 380px;
+  border: 4px solid var(--ink);
+  background: var(--paper);
+  box-shadow: 5px 5px 0 var(--ink);
+  padding: 12px 14px;
+  text-align: left;
+}
+
+.howto b {
+  font-family: var(--comic);
+  font-size: 20px;
+  letter-spacing: 0.6px;
+  display: block;
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.howto .line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: var(--comic);
+  font-size: 18px;
+  letter-spacing: 0.4px;
+  padding: 3px 0;
+}
+
+.howto .key {
+  flex: none;
+  min-width: 96px;
+  color: var(--red);
+}
+
+.howto .line.duck .key {
+  color: #7b4ba8;
+}
+
 .chip {
   font-family: var(--comic);
   font-size: 17px;
@@ -248,8 +313,8 @@ input:focus {
 
 .mute {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  top: calc(10px + env(safe-area-inset-top));
+  left: calc(10px + env(safe-area-inset-left));
   width: auto;
   font-size: 15px;
   letter-spacing: 0.5px;
