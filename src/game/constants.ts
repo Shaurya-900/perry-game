@@ -27,6 +27,12 @@ export const HITBOX_INSET_TOP = 5;
 export const GRAVITY = 2400;
 /** Reduced gravity while the jump button is held and the player is rising. */
 export const HOLD_GRAVITY = 900;
+/**
+ * Ducking in mid-air cancels the jump and slams the player down. Without it a
+ * mistimed jump at a gate is unrecoverable — you can see the duck you need and
+ * have no way to take it.
+ */
+export const FAST_FALL_GRAVITY = 5200;
 /** px/s */
 export const JUMP_V = 820;
 /** Holding longer than this stops helping (spec: ~450ms). */

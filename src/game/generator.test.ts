@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  COIN_R,
   CRATE_W,
+  DRONE_HALF_H,
   DRONE_W,
   FEDORA_POINTS,
   FIXED_DT,
@@ -14,7 +16,9 @@ import {
   SLIDE_TIME,
   TOWER_W,
 } from "./constants";
-import { MAX_PATTERN_SPAN, PATTERNS } from "./generator";
+import { MAX_PATTERN_SPAN, PATTERNS, createGen, generate } from "./generator";
+import { makeRng } from "./rng";
+import type { Coin, Obstacle } from "./types";
 import { botInput, nextObstacle, newBotMemory } from "./bot";
 import { createGame, hits, newPlayer, score, step, stepPlayer } from "./engine";
 
@@ -190,6 +194,38 @@ describe("obstacle generator", () => {
     sliding.sliding = true;
     expect(hits(gate, standing, 0, 0)).toBe(true);
     expect(hits(gate, sliding, 0, 0)).toBe(false);
+  });
+
+  /**
+   * A fedora inside an obstacle can never be collected, so it reads as a bug
+   * to the player and quietly taxes every run that goes past it. Drones move,
+   * so the whole band they sweep counts as solid.
+   */
+  it("never places a fedora inside an obstacle", () => {
+    let checked = 0;
+    const bad: string[] = [];
+    for (let seed = 1; seed <= 60; seed++) {
+      const gen = createGen(0);
+      const rng = makeRng(seed);
+      const obstacles: Obstacle[] = [];
+      const coins: Coin[] = [];
+      for (let x = 4000; x <= 160000; x += 4000) {
+        generate(gen, rng, obstacles, coins, x);
+      }
+      for (const c of coins) {
+        checked++;
+        for (const o of obstacles) {
+          if (c.x + COIN_R < o.x || c.x - COIN_R > o.x + o.w) continue;
+          const lo = o.amp === undefined ? o.yLow : o.cy! - o.amp - DRONE_HALF_H;
+          const hi = o.amp === undefined ? o.yHigh : o.cy! + o.amp + DRONE_HALF_H;
+          if (c.y + COIN_R > lo && c.y - COIN_R < hi) {
+            bad.push(`seed ${seed}: fedora (${c.x.toFixed(0)}, ${c.y.toFixed(0)}) inside ${o.kind} [${lo.toFixed(0)}..${hi.toFixed(0)}]`);
+          }
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(1000);
+    expect(bad.length, `${bad.length} unreachable fedoras:\n  ${bad.slice(0, 5).join("\n  ")}`).toBe(0);
   });
 
   it("is deterministic for a given seed", () => {

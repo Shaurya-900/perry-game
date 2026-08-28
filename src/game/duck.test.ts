@@ -50,6 +50,35 @@ describe("ducking", () => {
  * hit it standing — which on screen looks like the hat clipping the beam.
  * Holding has to keep them down.
  */
+describe("ducking in mid-air", () => {
+  function airtime(duckFrom: number) {
+    const p = newPlayer();
+    stepPlayer(p, FIXED_DT, { ...NO_INPUT, jumpPressed: true, jumpHeld: true });
+    let t = FIXED_DT;
+    for (let i = 1; i < 400; i++) {
+      const held = i >= duckFrom;
+      stepPlayer(p, FIXED_DT, { ...NO_INPUT, jumpHeld: !held, slideHeld: held });
+      t += FIXED_DT;
+      if (p.onGround) break;
+    }
+    return t;
+  }
+
+  it("cancels the jump and lands sooner than riding it out", () => {
+    const normal = airtime(9999);
+    const cancelled = airtime(10);
+    expect(cancelled).toBeLessThan(normal * 0.8);
+  });
+
+  it("still cannot duck while off the ground", () => {
+    const p = newPlayer();
+    stepPlayer(p, FIXED_DT, { ...NO_INPUT, jumpPressed: true, jumpHeld: true });
+    stepPlayer(p, FIXED_DT, { ...NO_INPUT, slideHeld: true });
+    expect(p.onGround).toBe(false);
+    expect(playerHeight(p)).toBe(PLAYER_H);
+  });
+});
+
 describe("an early duck at a gate", () => {
   function run(input: (tick: number) => Input) {
     const s = createGame({ seed: 5 });

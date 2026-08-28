@@ -1,5 +1,6 @@
 import {
   BASE_SPEED,
+  COIN_R,
   CRATE_H,
   CRATE_W,
   DRONE_HALF_H,
@@ -276,6 +277,23 @@ function addDiamond(coins: Coin[], gen: GenState, centreX: number, cy: number) {
 }
 
 /**
+ * A fedora inside an obstacle can never be collected, so it reads as a bug and
+ * quietly taxes every run that passes it. Cheaper to drop it than to make every
+ * shape aware of every obstacle it might sweep across — an arc drawn over the
+ * crate in `tower-crate`, for instance, reaches back over the tower.
+ */
+function blocked(obstacles: Obstacle[], c: Coin): boolean {
+  for (const o of obstacles) {
+    if (c.x + COIN_R < o.x || c.x - COIN_R > o.x + o.w) continue;
+    // Drones move, so the whole band they sweep counts as solid.
+    const lo = o.amp === undefined ? o.yLow : o.cy! - o.amp - DRONE_HALF_H;
+    const hi = o.amp === undefined ? o.yHigh : o.cy! + o.amp + DRONE_HALF_H;
+    if (c.y + COIN_R > lo && c.y - COIN_R < hi) return true;
+  }
+  return false;
+}
+
+/**
  * Fill the world with patterns up to `untilX`. Pure function of (gen, rng).
  */
 export function generate(
@@ -311,9 +329,21 @@ export function generate(
       spanEnd = Math.max(spanEnd, ox + o.w);
     }
 
-    // Optional fedora arc — always in clear air, never forced.
+    const gap =
+      (REACTION + RECOVERY_TIME[p.recovery]) * (1.7 - 0.75 * level) +
+      randRange(rng, 0, 0.45) * (1.1 - level);
+    const nextStart = spanEnd + gap * speed;
+
+    const coinsFrom = coins.length;
+
+    // Fedoras. Placed AFTER nextStart is known, and every clear-air shape is
+    // centred in the gap and clamped to it, so nothing can spill into the next
+    // pattern. A start-anchored line used to run past the gap and drop coins
+    // inside the following obstacle — most visibly at y=34, which is exactly a
+    // laser's lower edge.
     if (x - gen.lastArcX > 1.4 * speed && rng() < 0.55) {
       const last = p.items[p.items.length - 1];
+      const gapW = nextStart - spanEnd;
       if (last.kind === "crate" || last.kind === "tower") {
         // Arc over the obstacle: reward the optimal jump.
         const ox = x + last.dx;
@@ -327,19 +357,15 @@ export function generate(
         // Risk line: the greedy answer is to jump the beam, the safe one is to
         // slide under and take nothing. Skipping it is always survivable, so
         // the "never forced" invariant holds.
-        addLine(coins, gen, x + last.dx, LASER_HIGH + 16, LASER_W);
-      } else {
-        const clearX = spanEnd + 0.5 * speed;
-        if (rng() < 0.4) addDiamond(coins, gen, clearX, 86);
-        else if (rng() < 0.5) addLine(coins, gen, clearX, 34, Math.min(200, 0.5 * speed));
-        else addArc(coins, gen, clearX, 90, Math.min(230, 0.6 * speed));
+        addLine(coins, gen, x + last.dx, LASER_HIGH + 24, LASER_W);
+      } else if (gapW > 150) {
+        const centre = spanEnd + gapW / 2;
+        const span = Math.min(230, gapW * 0.55);
+        if (rng() < 0.4) addDiamond(coins, gen, centre, 86);
+        else if (rng() < 0.5) addLine(coins, gen, centre - span / 2, 34, span);
+        else addArc(coins, gen, centre, 90, span);
       }
     }
-
-    const gap =
-      (REACTION + RECOVERY_TIME[p.recovery]) * (1.7 - 0.75 * level) +
-      randRange(rng, 0, 0.45) * (1.1 - level);
-    const nextStart = spanEnd + gap * speed;
 
     // A power-up lives in the middle of a gap, at a comfortable height.
     if (
@@ -362,6 +388,11 @@ export function generate(
         taken: false,
       });
       gen.lastPowerX = x;
+    }
+
+    // Last line of defence, covering every shape at once.
+    for (let i = coins.length - 1; i >= coinsFrom; i--) {
+      if (blocked(obstacles, coins[i])) coins.splice(i, 1);
     }
 
     gen.nextX = nextStart;

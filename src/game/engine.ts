@@ -5,6 +5,7 @@ import {
   FEDORA_POINTS,
   FIXED_DT,
   GOLDEN_TIME,
+  FAST_FALL_GRAVITY,
   GRAVITY,
   MAGNET_PULL,
   MAGNET_RADIUS,
@@ -143,7 +144,11 @@ export function stepPlayer(p: PlayerState, dt: number, input: Input): void {
     else p.holdT += dt;
   }
 
-  const g = p.holding ? HOLD_GRAVITY : GRAVITY;
+  // Ducking in the air cancels the jump and drops fast, so a jump taken by
+  // mistake in front of a gate can still be turned into the duck it needed.
+  const fastFall = input.slideHeld && !p.onGround;
+  if (fastFall) p.holding = false;
+  const g = p.holding ? HOLD_GRAVITY : fastFall ? FAST_FALL_GRAVITY : GRAVITY;
   p.vy -= g * dt;
   p.y += p.vy * dt;
 
