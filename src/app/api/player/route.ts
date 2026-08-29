@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { bad, json, notConfigured, readJson } from "@/lib/http";
-import { looksLikeEmail, normaliseEmail, validName } from "@/lib/validate";
+import { isSnuDomain, looksLikeEmail, normaliseEmail, validName } from "@/lib/validate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,6 +20,8 @@ export async function POST(req: Request) {
   const email = normaliseEmail(body.email ?? "");
   if (!validName(name)) return bad("invalid_name");
   if (!looksLikeEmail(email)) return bad("invalid_email");
+  // The form blocks this too, but the form is not the boundary.
+  if (!isSnuDomain(email)) return bad("not_snu_email");
 
   const db = supabase();
   if (!db) return notConfigured();

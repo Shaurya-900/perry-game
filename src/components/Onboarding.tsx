@@ -21,13 +21,16 @@ export default function Onboarding({ onDone }: Props) {
 
   const nudge =
     email.length > 4 && looksLikeEmail(email) && !isSnuDomain(email)
-      ? "Not an @snu.edu.in address — that's fine, just checking."
+      ? "The leaderboard is SNU only — use your @snu.edu.in address."
       : "";
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!validName(name)) return setError("We need a name for the leaderboard.");
     if (!looksLikeEmail(email)) return setError("We need your email address.");
+    if (!isSnuDomain(email)) {
+      return setError("SNU students only — please use your @snu.edu.in email.");
+    }
     setError("");
     onDone(name, email, joinInterest);
   }

@@ -17,7 +17,7 @@ export function looksLikeEmail(raw: string): boolean {
 }
 
 export function isSnuDomain(raw: string): boolean {
-  return /@snu\.edu\.in$/i.test(normaliseEmail(raw));
+  return /@([a-z0-9-]+\.)*snu\.edu\.in$/i.test(normaliseEmail(raw));
 }
 
 export function validName(raw: string): boolean {
