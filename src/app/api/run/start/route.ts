@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { bad, json, notConfigured, readJson } from "@/lib/http";
 import { signRunToken } from "@/lib/token";
 import { randomUUID } from "node:crypto";
+import { rateLimit } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,6 +15,11 @@ export async function POST(req: Request) {
   const body = await readJson<{ playerId?: string; seed?: number }>(req);
   const playerId = body?.playerId;
   if (!playerId) return bad("missing_player");
+
+  // Keyed on the player, not the IP: the whole booth shares campus NAT, and a
+  // token is the one thing a forged submission cannot do without. A real
+  // player takes one per run, and submit already caps runs at 20 per 5 min.
+  if (!rateLimit(`start:${playerId}`, 40, 5 * 60 * 1000)) return bad("rate_limited", 429);
 
   const db = supabase();
   if (!db) return notConfigured();

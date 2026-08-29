@@ -1,5 +1,6 @@
 import { supabase, isFrozen } from "@/lib/supabase";
 import { json, notConfigured } from "@/lib/http";
+import { safeName } from "@/lib/name";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,7 +56,7 @@ export async function GET(req: Request) {
         ok: true,
         top: (top.data ?? []).map((r) => ({
           rank: Number(r.rank),
-          name: r.name as string,
+          name: safeName(r.name as string),
           score: r.best_score as number,
           playerId: r.player_id as string,
         })),

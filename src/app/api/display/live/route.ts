@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { json, notConfigured } from "@/lib/http";
+import { safeName } from "@/lib/name";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,7 +37,7 @@ export async function GET() {
     ok: true,
     running: rows.map((r) => ({
       playerId: r.player_id,
-      name: Array.isArray(r.players) ? r.players[0]?.name : r.players?.name,
+      name: safeName(Array.isArray(r.players) ? r.players[0]?.name : r.players?.name),
       score: r.score,
     })),
   });

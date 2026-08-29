@@ -122,6 +122,44 @@ npm run build
 
 ---
 
+## Names on the board
+
+The leaderboard goes on a monitor in a public university corridor, so the name
+field is the highest-risk input in the app — it is the only free text that ends
+up on a wall.
+
+`src/lib/name.ts` cleans it and then checks it, in that order:
+
+- **Cleaning** removes control characters, zero-width padding and right-to-left
+  overrides (which silently reverse a display row), collapses whitespace, and
+  rejects a name whose combining marks outnumber its letters — the "zalgo"
+  trick that spills text over neighbouring rows. None of this is a wordlist
+  problem; a blocklist would never catch it.
+- **The blocklist** in `src/lib/badwords.ts` matches against a folded form:
+  lowercased, unaccented, leetspeak mapped (`n1gg3r`), and — for the slur list
+  — letters only with repeats collapsed, so `N I I G G E R` folds to the same
+  string. Slurs, caste and communal abuse, and Hindi/Punjabi profanity are
+  matched anywhere inside the name; short or ambiguous entries are matched as
+  whole words instead, because `Kshitij`, `Cassandra`, `Assam` and `Gandhi` all
+  contain a banned substring and all are real names. `name.test.ts` pins both
+  halves: those names pass, and a dozen spellings of the slurs do not.
+
+The list is data, not logic — adding to it is the intended maintenance path.
+
+The check runs in three places, and only the second one is a boundary: the
+onboarding form (instant feedback), `POST /api/player` (the actual gate, on
+both the insert and the returning-player update), and once more on the way out
+in `/api/leaderboard` and `/api/display/live`, so a row written before this
+existed or edited straight in the Supabase table still cannot reach the wall.
+Anything that gets past the list is one `hide` click away in `/admin`.
+
+Emails are unverified by design, and anyone can guess a classmate's address, so
+the first device to claim a player row owns the name on it. A second phone with
+the same email still lands on the same row and still scores — it just cannot
+rename someone else's leaderboard entry.
+
+---
+
 ## Anti-cheat
 
 `POST /api/run/start` issues an HMAC-signed token containing a run id, the
@@ -133,9 +171,23 @@ plus ~15% headroom, or when a player has submitted more than 20 runs in five
 minutes. Everything rejected is written to `rejected_submissions` with a
 reason, so patterns are visible after the fair.
 
+Two bounds close the gaps that leaves:
+
+- Tokens are prefetched before a run, so a forged submission could otherwise
+  claim a ten-minute "run" and buy ten minutes of score allowance. Credited
+  duration is capped at five minutes (`MAX_CREDITED_MS`). It is a cap on the
+  *allowance*, not a rejection, so an exceptional long run is still accepted at
+  whatever it actually scored.
+- Token minting is capped at 40 per player per five minutes, and new player
+  rows at 40 per IP per ten minutes, which is well above a real booth rate — a
+  queue of students shares one campus NAT — and low enough that a script cannot
+  mint thousands of junk rows in the export. The limiter is in memory and
+  therefore per-instance; see the note in `src/lib/ratelimit.ts`.
+
 This will not stop a determined attacker — the game runs on the player's own
-device, so nothing can. It stops the devtools-console kid, which is the
-realistic threat at a club fair.
+device, so nothing can, and the blocklist ships to the browser where anyone can
+read it. It stops the devtools-console kid, which is the realistic threat at a
+club fair, and it bounds the damage of everything else.
 
 ---
 
@@ -173,8 +225,18 @@ Not verified here, and worth ten minutes each before the fair:
 
 - **60 fps on an actual mid-range Android.** The frame budget is small by
   construction — one canvas, pre-rendered parallax strips, a capped particle
-  pool, no shadow blur — but headless Chromium on a server is not a ₹15,000
-  phone.
+  pool, no shadow blur — but a desktop Chromium is not a ₹15,000 phone.
+
+  What *was* measured, on desktop, is that the cost does not grow with run
+  length: at t=240 s the simulation, the per-frame canvas call count, the time
+  inside those calls and the JS heap all match t=0. So a long run is not
+  leaking or accumulating; it is only denser, because the pressure ramp keeps
+  tightening the gaps. The one measured spike is the day/night crossfade, which
+  doubles the background blits (9 per frame to 18) for five seconds each way —
+  the first one lands at t=42 s. If the booth phone stutters and it turns out
+  to track nightfall, `DAY_LENGTH` and `NIGHT_FADE` in `render.ts` are the
+  knobs, and drawing one parallax set instead of two through the fade is the
+  cut to make.
 - **Native share on iOS and Android.** The card falls back to a download when
   `navigator.share` cannot take files; both paths run, only the fallback was
   exercised here.

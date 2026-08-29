@@ -164,6 +164,28 @@ function mix(a: string, b: string, t: number): string {
   return `rgb(${r},${g},${bl})`;
 }
 
+export const SPEED_LINES = 7;
+
+/**
+ * Where speed streak `i` sits at camera position `camX`.
+ *
+ * A streak blows past horizontally and holds its height for the whole time it
+ * is on screen; it only picks a new one on the pass after it has wrapped off
+ * the left edge. The height used to be derived from `camX` directly, which
+ * made every streak crawl steadily down the sky — a skyful of horizontal lines
+ * raining down behind the action, which is not what a speed line is.
+ */
+export function speedLine(i: number, camX: number, band: number) {
+  const period = WORLD_W + 200;
+  const travel = camX * 1.9 + i * 130;
+  const pass = Math.floor(travel / period);
+  return {
+    x: WORLD_W - (travel % period),
+    y: 20 + ((i * 97 + pass * 211) % band),
+    len: 40 + ((i * 37) % 60),
+  };
+}
+
 /** Highest point the player can ever reach, plus a little air. */
 const MIN_HEADROOM = 400;
 
@@ -521,12 +543,11 @@ export class Renderer {
       ctx.strokeStyle = `rgba(20,17,16,${a})`;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      for (let i = 0; i < 7; i++) {
-        const y = ((i * 97 + ((camX * 1.6) % 400)) % (this.groundY - 40)) + 20;
-        const len = 40 + ((i * 37) % 60);
-        const x = WORLD_W - ((camX * 1.9 + i * 130) % (WORLD_W + 200));
-        ctx.moveTo(x, y);
-        ctx.lineTo(x + len, y);
+      const band = Math.max(1, this.groundY - 60);
+      for (let i = 0; i < SPEED_LINES; i++) {
+        const l = speedLine(i, camX, band);
+        ctx.moveTo(l.x, l.y);
+        ctx.lineTo(l.x + l.len, l.y);
       }
       ctx.stroke();
     }
@@ -597,27 +618,6 @@ export class Renderer {
       if (c.power === "magnet") drawMagnet(ctx, 13, s.t);
       else if (c.power === "shield") drawShield(ctx, 13, s.t);
       else drawFedora(ctx, c.power ? 13 : 11, c.power === "golden", s.t);
-      ctx.restore();
-    }
-
-    // ---- Speed lines ----
-    // Drawn directly rather than as particles, to stay clear of the 90-particle
-    // cap the frame budget depends on.
-    const speedMult = s.speed / BASE_SPEED;
-    if (speedMult > 1.7 && !s.dead) {
-      ctx.save();
-      ctx.globalAlpha = Math.min(0.3, (speedMult - 1.7) * 0.55);
-      ctx.strokeStyle = INK;
-      ctx.lineWidth = 2;
-      for (let i = 0; i < 7; i++) {
-        const y = ((i * 97 + ((s.t * 260) % 97)) % this.worldH) * 0.82;
-        const len = 40 + ((i * 37) % 60);
-        const x = WORLD_W - ((s.t * 900 + i * 130) % (WORLD_W + 120));
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x + len, y);
-        ctx.stroke();
-      }
       ctx.restore();
     }
 

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { isSnuDomain, looksLikeEmail, validName } from "@/lib/validate";
+import { isSnuDomain, looksLikeEmail } from "@/lib/validate";
+import { checkName } from "@/lib/name";
 
 interface Props {
   /** `joinInterest` is stored in the players.opted_in column — see below. */
@@ -26,13 +27,20 @@ export default function Onboarding({ onDone }: Props) {
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!validName(name)) return setError("We need a name for the leaderboard.");
+    const nm = checkName(name);
+    if (!nm.ok) {
+      return setError(
+        nm.reason === "blocked_name"
+          ? "That name will not go on the stall screen. Try another."
+          : "We need a name for the leaderboard.",
+      );
+    }
     if (!looksLikeEmail(email)) return setError("We need your email address.");
     if (!isSnuDomain(email)) {
       return setError("SNU students only — please use your @snu.edu.in email.");
     }
     setError("");
-    onDone(name, email, joinInterest);
+    onDone(nm.name, email, joinInterest);
   }
 
   return (

@@ -20,11 +20,6 @@ export function isSnuDomain(raw: string): boolean {
   return /@([a-z0-9-]+\.)*snu\.edu\.in$/i.test(normaliseEmail(raw));
 }
 
-export function validName(raw: string): boolean {
-  const v = raw.trim();
-  return v.length >= 2 && v.length <= 40;
-}
-
 export interface RunSubmission {
   score: number;
   durationMs: number;
@@ -51,7 +46,11 @@ export function checkScore(sub: RunSubmission, tokenAgeMs: number): ScoreVerdict
   if (durationMs > tokenAgeMs + 5000) {
     return { ok: false, reason: "duration_exceeds_session" };
   }
-  const seconds = durationMs / 1000;
+  // Credited seconds are capped: a token stays valid for ten minutes and is
+  // prefetched before the run, so a forged submission can otherwise claim a
+  // ten minute "run". No real run is rejected by this - the cap still allows
+  // far more than the greedy-collector rate over five minutes.
+  const seconds = Math.min(durationMs, MAX_CREDITED_MS) / 1000;
   const allowance = MAX_SCORE_RATE * Math.max(seconds, 3);
   if (score > allowance) return { ok: false, reason: "score_rate_impossible" };
   // Number.isInteger also rejects NaN and Infinity: Number("abc") reaches here
@@ -61,6 +60,9 @@ export function checkScore(sub: RunSubmission, tokenAgeMs: number): ScoreVerdict
   }
   return { ok: true };
 }
+
+/** Longest run that earns score at the full rate. */
+export const MAX_CREDITED_MS = 5 * 60 * 1000;
 
 export const SUBMISSION_WINDOW_MS = 5 * 60 * 1000;
 export const MAX_SUBMISSIONS_PER_WINDOW = 20;
