@@ -293,7 +293,6 @@ export default function GameApp() {
             </button>
           </div>
           <div className="sub">RUNS TODAY: {player.runsToday}</div>
-          <div className="sub">TOP 4 AT THE END OF THE FAIR WIN AN E-CELL GIFT</div>
           <div className="credit">
             BUILT BY SHAURYA JAIN · E-CELL TECH LEAD
           </div>

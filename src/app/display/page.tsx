@@ -91,10 +91,7 @@ export default function Display() {
   return (
     <div className="display">
       <div className="head">
-        <div className="title">
-          E-CELL AGENT RUN
-          <small>SHIV NADAR UNIVERSITY · CLUB FAIR</small>
-        </div>
+        <div className="title">E-CELL AGENT RUN</div>
         <div className="counter">
           PLAYERS TODAY
           <b>{data?.playersToday ?? "—"}</b>
@@ -138,7 +135,7 @@ export default function Display() {
 
       <div className="foot">
         <div className="cta">
-          SCAN TO PLAY <span>· TOP 4 WIN AN E-CELL GIFT</span>
+          SCAN TO PLAY
           {data?.frozen && <div className="frozen">LEADERBOARD FINAL</div>}
           <div className="credit">BUILT BY SHAURYA JAIN · E-CELL TECH LEAD</div>
         </div>

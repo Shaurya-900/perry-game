@@ -157,10 +157,6 @@ export function renderScoreCard(data: CardData): HTMLCanvasElement {
   ctx.strokeRect(-430, -66, 860, 116);
   outlined(ctx, "E-CELL AGENT REPORT", 0, 26, 78, PAPER, 10);
   ctx.restore();
-  ctx.textAlign = "center";
-  ctx.font = `34px ${COMIC_FONT}`;
-  ctx.fillStyle = INK;
-  ctx.fillText("SHIV NADAR UNIVERSITY · CLUB FAIR", W / 2, 268);
 
   // ---- Hero panel ----
   const px = 90;
@@ -403,8 +399,8 @@ export async function shareScoreCard(
     try {
       await nav.share({
         files: [file],
-        title: "E-Cell Club Fair",
-        text: `I scored ${data.score} dodging -inators at the E-Cell stall. Beat it.`,
+        title: "E-Cell Agent Run",
+        text: `I scored ${data.score} dodging -inators in E-Cell Agent Run. Beat it.`,
         url: challengeUrl(data.seed, data.score, data.name),
       });
       return "shared";

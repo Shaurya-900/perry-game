@@ -107,7 +107,7 @@ function Admin() {
             disabled={busy}
             onClick={() => act(stats.frozen ? "unfreeze" : "freeze")}
           >
-            {stats.frozen ? "Unfreeze leaderboard" : "Freeze leaderboard (end of fair)"}
+            {stats.frozen ? "Unfreeze leaderboard" : "Freeze leaderboard"}
           </button>
 
           <h3 style={S.h}>Recent sign-ups</h3>

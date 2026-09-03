@@ -16,10 +16,6 @@ export function looksLikeEmail(raw: string): boolean {
   return /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(v);
 }
 
-export function isSnuDomain(raw: string): boolean {
-  return /@([a-z0-9-]+\.)*snu\.edu\.in$/i.test(normaliseEmail(raw));
-}
-
 export interface RunSubmission {
   score: number;
   durationMs: number;

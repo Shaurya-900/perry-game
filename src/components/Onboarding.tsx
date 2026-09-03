@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { isSnuDomain, looksLikeEmail } from "@/lib/validate";
+import { looksLikeEmail } from "@/lib/validate";
 import { checkName } from "@/lib/name";
 
 interface Props {
@@ -20,25 +20,17 @@ export default function Onboarding({ onDone }: Props) {
   const [joinInterest, setJoinInterest] = useState(false);
   const [error, setError] = useState("");
 
-  const nudge =
-    email.length > 4 && looksLikeEmail(email) && !isSnuDomain(email)
-      ? "The leaderboard is SNU only — use your @snu.edu.in address."
-      : "";
-
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const nm = checkName(name);
     if (!nm.ok) {
       return setError(
         nm.reason === "blocked_name"
-          ? "That name will not go on the stall screen. Try another."
+          ? "That name will not go on the leaderboard. Try another."
           : "We need a name for the leaderboard.",
       );
     }
     if (!looksLikeEmail(email)) return setError("We need your email address.");
-    if (!isSnuDomain(email)) {
-      return setError("SNU students only — please use your @snu.edu.in email.");
-    }
     setError("");
     onDone(nm.name, email, joinInterest);
   }
@@ -46,7 +38,7 @@ export default function Onboarding({ onDone }: Props) {
   return (
     <div className="overlay sheet">
       <h1>AGENT RUN</h1>
-      <div className="sub">DODGE THE -INATORS · TOP 4 WIN AN E-CELL GIFT</div>
+      <div className="sub">DODGE THE -INATORS</div>
       <form className="panel" onSubmit={submit}>
         <label htmlFor="nm">YOUR NAME</label>
         <input
@@ -59,7 +51,7 @@ export default function Onboarding({ onDone }: Props) {
           onChange={(e) => setName(e.target.value)}
           placeholder="Riya S."
         />
-        <label htmlFor="em">SNU EMAIL</label>
+        <label htmlFor="em">EMAIL</label>
         <input
           id="em"
           type="email"
@@ -69,7 +61,7 @@ export default function Onboarding({ onDone }: Props) {
           maxLength={120}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="rs123@snu.edu.in"
+          placeholder="you@example.com"
         />
         {/*
           * The club already has every student's email, so asking to mail them
@@ -85,12 +77,12 @@ export default function Onboarding({ onDone }: Props) {
           />
           <span>I want to join E-Cell. Tell me how.</span>
         </label>
-        <div className="error">{error || nudge}</div>
+        <div className="error">{error}</div>
         <button className="primary" type="submit">
           START RUNNING
         </button>
       </form>
-      <div className="sub">Your score goes on the screen at the stall.</div>
+      <div className="sub">Your score goes on the leaderboard.</div>
     </div>
   );
 }

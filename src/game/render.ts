@@ -529,7 +529,7 @@ export class Renderer {
       ctx.textBaseline = "middle";
       ctx.fillStyle = INK;
       ctx.fillText(
-        "E-CELL · SNU CLUB FAIR · TOP 4 WIN A GIFT",
+        "E-CELL AGENT RUN",
         WORLD_W / 2,
         this.worldH - capH / 2 + 2,
       );

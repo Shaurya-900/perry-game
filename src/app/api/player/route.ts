@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { bad, json, notConfigured, readJson } from "@/lib/http";
-import { isSnuDomain, looksLikeEmail, normaliseEmail } from "@/lib/validate";
+import { looksLikeEmail, normaliseEmail } from "@/lib/validate";
 import { checkName } from "@/lib/name";
 import { clientIp, rateLimit } from "@/lib/ratelimit";
 
@@ -31,8 +31,6 @@ export async function POST(req: Request) {
   if (!verdict.ok) return bad(verdict.reason);
   const name = verdict.name;
   if (!looksLikeEmail(email)) return bad("invalid_email");
-  // The form blocks this too, but the form is not the boundary.
-  if (!isSnuDomain(email)) return bad("not_snu_email");
 
   const db = supabase();
   if (!db) return notConfigured();

@@ -3,12 +3,13 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "E-Cell Agent Run · SNU Club Fair",
+  title: "E-Cell Agent Run",
   description:
     "Dodge the -inators, grab the fedoras, land on the E-Cell leaderboard. One thumb, one run.",
   openGraph: {
     title: "E-Cell Agent Run",
-    description: "Top 4 at the end of the fair win an E-Cell gift. Scan and run.",
+    description:
+      "Dodge the -inators, grab the fedoras, land on the E-Cell leaderboard. Scan and run.",
   },
   robots: { index: false },
 };
