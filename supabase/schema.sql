@@ -18,7 +18,7 @@ create table if not exists players (
   runs        integer not null default 0,
   deleted     boolean not null default false,
   created_at  timestamptz not null default now(),
-  updated_at  timestamptz not null default now()
+  updated_at  timestamptz not null default now()  -- when best_score last rose; the leaderboard tiebreak
 );
 
 create table if not exists runs (

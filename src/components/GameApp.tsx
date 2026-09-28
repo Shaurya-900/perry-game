@@ -197,8 +197,21 @@ export default function GameApp() {
     [persist, primeToken, refreshBoard],
   );
 
+  // Keep the waiting token fresh. It used to be fetched once on entering the
+  // screen, so a phone left on PLAY for ten minutes (handed round a booth
+  // queue) started a run on an expired token and the score was rejected.
   useEffect(() => {
-    if (phase === "ready" || phase === "over") void primeToken();
+    if (phase !== "ready" && phase !== "over") return;
+    void primeToken();
+    const id = setInterval(() => void primeToken(), 30_000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void primeToken();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [phase, primeToken]);
 
   // Feed the booth display while a run is in progress. No "run ended" call:

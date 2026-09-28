@@ -52,7 +52,8 @@ export async function POST(req: Request) {
         ...(owns ? { name, client_id: body.clientId ?? null } : {}),
         // Never silently downgrade a yes to a no, but always honour a new yes.
         opted_in: body.optedIn ? true : existing.opted_in,
-        updated_at: new Date().toISOString(),
+        // No updated_at here: it is the leaderboard tiebreak (see run/submit),
+        // and this runs on every page load.
       })
       .eq("id", existing.id);
     return json({

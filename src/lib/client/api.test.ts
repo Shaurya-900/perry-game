@@ -81,3 +81,26 @@ describe("offline queue flush", () => {
     expect(queued(map)).toEqual(["late"]);
   });
 });
+
+describe("submitRun", () => {
+  let map: Map<string, string>;
+  beforeEach(() => {
+    vi.resetModules();
+    map = installStorage();
+  });
+
+  it("gives up on a hung request and queues the run for retry", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", (_url: string, init: RequestInit) =>
+      new Promise((_, reject) => {
+        init.signal?.addEventListener("abort", () => reject(new Error("aborted")));
+      }),
+    );
+    const { submitRun } = await import("./api");
+    const pending = submitRun(run("hung"));
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(await pending).toBeNull();
+    expect(queued(map)).toEqual(["hung"]);
+    vi.useRealTimers();
+  });
+});

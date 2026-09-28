@@ -95,7 +95,10 @@ export async function POST(req: Request) {
     .update({
       best_score: Math.max(previousBest, sub.score),
       runs: (player?.runs ?? 0) + 1,
-      updated_at: new Date().toISOString(),
+      // updated_at breaks ties on the leaderboard view (earliest wins), so it
+      // only moves when the best score does. Bumping it on every run pushed a
+      // player below everyone they were tied with just for playing again.
+      ...(isBest ? { updated_at: new Date().toISOString() } : {}),
     })
     .eq("id", playerId);
 

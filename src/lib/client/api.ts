@@ -96,11 +96,16 @@ export async function startRun(
 /** Returns null when the score could not be delivered — it is queued instead. */
 export async function submitRun(run: PendingRun): Promise<SubmitResult | null> {
   if (!run.token) return null;
+  // Without a timeout a hung request left the post-run screen on "sending"
+  // forever and the run never reached the retry queue.
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
   try {
     const res = await fetch("/api/run/submit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(run),
+      signal: ctrl.signal,
     });
     if (res.ok) return (await res.json()) as SubmitResult;
     // 4xx that is not a rate limit means the server will never accept this
@@ -111,6 +116,8 @@ export async function submitRun(run: PendingRun): Promise<SubmitResult | null> {
   } catch {
     enqueue(run);
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
